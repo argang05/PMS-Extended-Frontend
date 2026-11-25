@@ -1,95 +1,122 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import { useAuth } from "@/app/context/AuthContext";
 import SubmitConfirmModal from "@/components/SubmitConfirmModal";
 import {
   fetchCurrentQuestionnaire,
   saveQuestionnaireDraft,
-  submitQuestionnaire,
+  submitQuestionnaire
 } from "@/services/questionnaire";
-import { useRouter } from "next/navigation";
+import {
+  emptyEvaluationAnswer,
+  restoreEvaluationDraft,
+  buildEvaluationResponses,
+  validateEvaluation
+} from "@/lib/evaluationDraft";
 import { toast } from "sonner";
 
-function RatingInput({ value, onChange, disabled }) {
-    
+const cardClass = "rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]";
+const inputClass = "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-[#111827] outline-none focus:border-[#F6490D] focus:ring-2 focus:ring-[#F6490D]/20 disabled:cursor-not-allowed disabled:bg-gray-100";
+
+function RatingInput({ value, maxMarks, onChange, disabled }) {
+  const max = Number(maxMarks);
+
   return (
     <select
-      value={value || ""}
-      onChange={(e) => onChange(e.target.value)}
+      value={value ?? ""}
+      onChange={e => onChange(e.target.value)}
       disabled={disabled}
-      className="w-28 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-[#111827] shadow-sm outline-none transition focus:border-[#F6490D] focus:ring-2 focus:ring-[#F6490D]/20 disabled:cursor-not-allowed disabled:bg-gray-100"
+      className="w-32 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-[#111827] shadow-sm outline-none focus:border-[#F6490D] disabled:cursor-not-allowed disabled:bg-gray-100"
     >
       <option value="">Select</option>
-      {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-        <option key={num} value={num}>
-          {num}
-        </option>
+      {Number.isInteger(max) && max >= 0 && Array.from({ length: max + 1 }, (_, index) => (
+        <option key={index} value={index}>{index}</option>
       ))}
     </select>
   );
 }
 
-function SectionCard({ title, items, responses, setResponses, disabled }) {
-  const handleScoreChange = (itemId, score) => {
-    setResponses((prev) => ({
-      ...prev,
-      [itemId]: score ? Number(score) : "",
-    }));
-  };
+function SectionCard({ title, items, responses, updateResponse, disabled }) {
+  if (!items.length) return null;
 
   return (
-    <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight text-[#111827]">
-          {title}
-        </h2>
-
+    <section className={cardClass}>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight text-[#111827]">{title}</h2>
         <span className="rounded-full bg-[#FFF1EC] px-3 py-1 text-xs font-semibold text-[#F6490D]">
-          1–10 Rating
+          {items.length} Question{items.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       <div className="space-y-4">
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5 shadow-sm transition hover:shadow-md"
-          >
-            <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="max-w-3xl">
-                <p className="mb-1 text-sm font-semibold text-[#111827]">
-                  Q{index + 1}. {item.question_text}
-                </p>
-                {/* <p className="text-xs text-gray-500">
-                  Weightage: {item.weightage}
-                </p> */}
+        {items.map((item, index) => {
+          const answer = responses[item.id] || emptyEvaluationAnswer();
+          const descriptive = item.question_type === "descriptive";
+
+          return (
+            <div key={item.id} className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5 shadow-sm transition hover:shadow-md">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl flex-1">
+                  <p className="text-sm font-semibold leading-7 text-[#111827]">
+                    Q{index + 1}. {item.question_text}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                    <span className="rounded-full bg-white px-3 py-1">
+                      {descriptive ? "Descriptive" : `Objective · 0–${item.max_marks}`}
+                    </span>
+                    <span className="rounded-full bg-white px-3 py-1">
+                      Weightage: {item.weightage}
+                    </span>
+                  </div>
+                </div>
+
+                {!descriptive && (
+                  <RatingInput
+                    value={answer.score}
+                    maxMarks={item.max_marks}
+                    disabled={disabled}
+                    onChange={score => updateResponse(item.id, { score, descriptive_answer: "" })}
+                  />
+                )}
               </div>
 
-              <RatingInput
-                value={responses[item.id]}
-                onChange={(score) => handleScoreChange(item.id, score)}
-                disabled={disabled}
-              />
+              {descriptive && (
+                <div className="mt-4">
+                  <label className="mb-2 block text-xs font-medium text-gray-600">Your Response</label>
+                  <textarea
+                    rows={4}
+                    value={answer.descriptive_answer ?? ""}
+                    disabled={disabled}
+                    onChange={e => updateResponse(item.id, {
+                      descriptive_answer: e.target.value,
+                      score: ""
+                    })}
+                    placeholder="Write your response here..."
+                    className={inputClass}
+                  />
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 }
 
 export default function QuestionnairePage() {
   const { accessToken, user } = useAuth();
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const [questionnaireId, setQuestionnaireId] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [responses, setResponses] = useState({});
@@ -98,151 +125,151 @@ export default function QuestionnairePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+
     async function loadQuestionnaire() {
       try {
         setLoading(true);
         setError("");
 
         const data = await fetchCurrentQuestionnaire(accessToken);
+        if (!active) return;
 
-        const questionList = data?.questions || [];
-        setQuestionnaireId(data?.questionnaire_id || null);
+        const questionList = Array.isArray(data?.questions) ? data.questions : [];
+        const restored = restoreEvaluationDraft(questionList, data?.draft, "id");
+
+        setQuestionnaireId(data?.questionnaire_id ?? null);
         setQuestions(questionList);
-
-        const initialResponses = {};
-        questionList.forEach((q) => {
-          initialResponses[q.id] = "";
-        });
-        setResponses(initialResponses);
+        setResponses(restored.responses);
+        setFeedback(restored.feedback);
+        setScopeOfImprovement(restored.scope_of_improvement);
+        setIsSubmitted(Boolean(data?.status && data.status !== "draft"));
       } catch (err) {
-        setError(err.message || "Failed to load questionnaire.");
+        if (active) {
+          setError(err.message || "Failed to load questionnaire.");
+          toast.error(err.message || "Failed to load questionnaire.");
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    if (accessToken) {
-      loadQuestionnaire();
-    }
+    loadQuestionnaire();
+    return () => { active = false; };
   }, [accessToken]);
 
   const groupedQuestions = useMemo(() => {
-    const behavioral = questions.filter((q) => q.category_type === "behavioral");
-    const performance = questions.filter((q) => q.category_type === "performance");
-  
-    return { behavioral, performance };
+    const behavioral = [], performance = [], additional = [];
+
+    questions.forEach(question => {
+      const type = String(question.category_type || "").toLowerCase();
+      if (type === "behavioral") behavioral.push(question);
+      else if (type === "performance") performance.push(question);
+      else additional.push(question);
+    });
+
+    return { behavioral, performance, additional };
   }, [questions]);
 
-  const buildPayload = () => ({
-    questionnaire_id: questionnaireId,
-    feedback,
-    scope_of_improvement: scopeOfImprovement,
-    responses: Object.entries(responses)
-      .filter(([, score]) => score !== "" && score !== null && score !== undefined)
-      .map(([itemId, score]) => ({
-        item_id: Number(itemId),
-        score: Number(score),
-      })),
-  });
+  function updateResponse(itemId, patch) {
+    setResponses(previous => ({
+      ...previous,
+      [itemId]: { ...(previous[itemId] || emptyEvaluationAnswer()), ...patch }
+    }));
+  }
 
-  const handleSaveDraft = async () => {
+  function buildPayload(onlyAnswered = false) {
+    return {
+      questionnaire_id: questionnaireId,
+      feedback,
+      scope_of_improvement: scopeOfImprovement,
+      responses: buildEvaluationResponses(questions, responses, "id", onlyAnswered)
+    };
+  }
+
+  function validateSubmission() {
+    if (!questionnaireId) return "Questionnaire not found.";
+    return validateEvaluation(
+      questions, responses, "id", true, feedback, scopeOfImprovement
+    );
+  }
+
+  async function handleSaveDraft() {
+    if (loading || saving || submitting || isSubmitted) return;
+
     try {
       setSaving(true);
       setError("");
       setSuccess("");
 
-      const payload = buildPayload();
-      const data = await saveQuestionnaireDraft(accessToken, payload);
+      if (!questionnaireId) throw new Error("Questionnaire not found.");
 
-      setSuccess(data?.message || "Draft saved successfully.");
+      const data = await saveQuestionnaireDraft(accessToken, buildPayload(true));
+      const message = data?.message || "Draft saved successfully.";
+
+      setSuccess(message);
+      toast.success(message);
     } catch (err) {
-      setError(err.message || "Failed to save draft.");
+      const message = err.message || "Failed to save draft.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  // const handleSubmit = async () => {
-  //   try {
-  //     setSubmitting(true);
-  //     setError("");
-  //     setSuccess("");
-  
-  //     const unanswered = questions.some((q) => !responses[q.id]);
-  //     if (unanswered) {
-  //       throw new Error("Please answer all questions before final submission.");
-  //     }
-  
-  //     if (!feedback.trim()) {
-  //       throw new Error("Please add feedback before submission.");
-  //     }
-  
-  //     if (!scopeOfImprovement.trim()) {
-  //       throw new Error("Please add scope of improvement before submission.");
-  //     }
-  
-  //     await saveQuestionnaireDraft(accessToken, buildPayload());
-  
-  //     const data = await submitQuestionnaire(accessToken, {
-  //       questionnaire_id: questionnaireId,
-  //     });
-  
-  //     setSuccess(data?.message || "Questionnaire submitted successfully.");
-  //     setIsSubmitted(true);
-  
-  //     toast.success("Questionnaire submitted successfully.");
-  
-  //     setTimeout(() => {
-  //       router.push("/dashboard");
-  //       router.refresh();
-  //     }, 1000);
-  //   } catch (err) {
-  //     setError(err.message || "Failed to submit questionnaire.");
-  //     toast.error(err.message || "Failed to submit questionnaire.");
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
+  function confirmSubmission() {
+    if (loading || saving || submitting || isSubmitted) return;
 
-  const handleSubmit = async () => {
+    const validationError = validateSubmission();
+
+    if (validationError) {
+      setError(validationError);
+      toast.error(validationError);
+      return;
+    }
+
+    setError("");
+    setConfirmOpen(true);
+  }
+
+  async function handleSubmit() {
+    if (loading || saving || submitting || isSubmitted) return;
+
+    const validationError = validateSubmission();
+
+    if (validationError) {
+      setConfirmOpen(false);
+      setError(validationError);
+      toast.error(validationError);
+      return;
+    }
+
     try {
       setSubmitting(true);
+      setConfirmOpen(false);
       setError("");
       setSuccess("");
-  
-      if (!questionnaireId) {
-        throw new Error("Questionnaire not found.");
-      }
-  
-      const unanswered = questions.some((q) => !responses[q.id]);
-      if (unanswered) {
-        throw new Error("Please answer all questions before final submission.");
-      }
-  
-      if (!feedback.trim()) {
-        throw new Error("Please add feedback before submission.");
-      }
-  
-      if (!scopeOfImprovement.trim()) {
-        throw new Error("Please add scope of improvement before submission.");
-      }
-  
-      const payload = buildPayload();
-  
-      const data = await submitQuestionnaire(accessToken, payload);
-  
-      setSuccess(data?.message || "Questionnaire submitted successfully.");
+
+      const data = await submitQuestionnaire(accessToken, buildPayload());
+      const message = data?.message || "Questionnaire submitted successfully.";
+
+      setSuccess(message);
       setIsSubmitted(true);
-  
-      toast.success("Questionnaire submitted successfully.");
+      toast.success(message);
       router.push("/dashboard");
+      router.refresh();
     } catch (err) {
-      setError(err.message || "Failed to submit questionnaire.");
-      toast.error(err.message || "Failed to submit questionnaire.");
+      const message = err.message || "Failed to submit questionnaire.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
-  };
+  }
+
+  const disabled = loading || saving || submitting || isSubmitted;
 
   return (
     <main className="min-h-screen bg-[#F3F4F6]">
@@ -254,111 +281,132 @@ export default function QuestionnairePage() {
             Self Questionnaire
           </h1>
           <p className="mt-2 text-sm text-gray-600">
-            Fill your self-evaluation form carefully. Once submitted, it will move
-            to the next review stage.
+            Fill your self-evaluation form carefully. Once submitted, it will move to the next review stage.
           </p>
-          {user?.department ? (
+          {user?.department && (
             <p className="mt-1 text-sm text-gray-500">
               Department: <span className="font-medium text-[#111827]">{user.department}</span>
             </p>
-          ) : null}
+          )}
         </div>
 
         {loading ? (
-          <div className="rounded-[28px] bg-white p-8 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
+          <div className={cardClass}>
             <p className="text-sm text-gray-600">Loading questionnaire...</p>
-          </div>
-        ) : error ? (
-          <div className="rounded-[28px] border border-red-200 bg-red-50 p-5 text-sm text-red-700 shadow-sm">
-            {error}
           </div>
         ) : (
           <div className="space-y-8">
-            {success ? (
-              <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 shadow-sm">
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
                 {success}
               </div>
-            ) : null}
+            )}
 
-            <SectionCard
-              title="Skillset & Behavioural Parameters"
-              items={groupedQuestions.behavioral}
-              responses={responses}
-              setResponses={setResponses}
-              disabled={isSubmitted}
-            />
-
-            <SectionCard
-              title="Performance Parameters"
-              items={groupedQuestions.performance}
-              responses={responses}
-              setResponses={setResponses}
-              disabled={isSubmitted}
-            />
-
-            <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-              <h2 className="mb-5 text-xl font-semibold tracking-tight text-[#111827]">
-                Self Summary
-              </h2>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                    Feedback
-                  </label>
-                  <textarea
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    rows={4}
-                    disabled={isSubmitted}
-                    placeholder="Write your overall feedback for this review cycle..."
-                    className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-[#111827] shadow-sm outline-none transition focus:border-[#F6490D] focus:ring-2 focus:ring-[#F6490D]/20 disabled:cursor-not-allowed disabled:bg-gray-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                    Scope of Improvement
-                  </label>
-                  <textarea
-                    value={scopeOfImprovement}
-                    onChange={(e) => setScopeOfImprovement(e.target.value)}
-                    rows={4}
-                    disabled={isSubmitted}
-                    placeholder="Mention areas where you want to improve further..."
-                    className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-[#111827] shadow-sm outline-none transition focus:border-[#F6490D] focus:ring-2 focus:ring-[#F6490D]/20 disabled:cursor-not-allowed disabled:bg-gray-100"
-                  />
-                </div>
+            {isSubmitted && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                Your self-evaluation has already been submitted. Responses are read-only.
               </div>
-            </div>
+            )}
 
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={handleSaveDraft}
-                disabled={saving || submitting || isSubmitted}
-                className="rounded-2xl border border-[#F6490D] bg-white px-6 py-3 text-sm font-semibold text-[#F6490D] shadow-sm transition hover:scale-[1.01] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? "Saving..." : "Save Draft"}
-              </button>
+            {questionnaireId && (
+              <>
+                <SectionCard
+                  title="Skillset & Behavioural Parameters"
+                  items={groupedQuestions.behavioral}
+                  responses={responses}
+                  updateResponse={updateResponse}
+                  disabled={disabled}
+                />
 
-              <button
-                onClick={() => setConfirmOpen(true)}
-                disabled={saving || submitting || isSubmitted}
-                className="rounded-2xl bg-[#F6490D] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(246,73,13,0.22)] transition hover:scale-[1.01] hover:shadow-[0_16px_30px_rgba(246,73,13,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                {submitting ? "Submitting..." : isSubmitted ? "Submitted" : "Submit Final"}
-                </button>
-            </div>
+                <SectionCard
+                  title="Performance Parameters"
+                  items={groupedQuestions.performance}
+                  responses={responses}
+                  updateResponse={updateResponse}
+                  disabled={disabled}
+                />
+
+                <SectionCard
+                  title="Additional Parameters"
+                  items={groupedQuestions.additional}
+                  responses={responses}
+                  updateResponse={updateResponse}
+                  disabled={disabled}
+                />
+
+                <section className={cardClass}>
+                  <h2 className="mb-5 text-xl font-semibold tracking-tight text-[#111827]">
+                    Self Summary
+                  </h2>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-[#111827]">
+                        Feedback
+                      </label>
+                      <textarea
+                        value={feedback}
+                        onChange={e => setFeedback(e.target.value)}
+                        rows={4}
+                        disabled={disabled}
+                        placeholder="Write your overall feedback for this review cycle..."
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-[#111827]">
+                        Scope of Improvement
+                      </label>
+                      <textarea
+                        value={scopeOfImprovement}
+                        onChange={e => setScopeOfImprovement(e.target.value)}
+                        rows={4}
+                        disabled={disabled}
+                        placeholder="Mention areas where you want to improve further..."
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {!isSubmitted && (
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      disabled={disabled}
+                      className="rounded-2xl border border-[#F6490D] bg-white px-6 py-3 text-sm font-semibold text-[#F6490D] shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {saving ? "Saving..." : "Save Draft"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={confirmSubmission}
+                      disabled={disabled}
+                      className="rounded-2xl bg-[#F6490D] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(246,73,13,0.22)] transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {submitting ? "Submitting..." : "Submit Final"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
+
         <SubmitConfirmModal
-            open={confirmOpen}
-            onCancel={() => setConfirmOpen(false)}
-            onConfirm={() => {
-                setConfirmOpen(false);
-                handleSubmit();
-            }}
-            />
+          open={confirmOpen}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={handleSubmit}
+        />
       </section>
     </main>
   );

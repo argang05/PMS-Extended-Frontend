@@ -1,117 +1,47 @@
 "use client";
-
 import { useEffect, useState } from "react";
-// import AppHeader from "@/components/layout/AppHeader";
 import { useAuth } from "@/app/context/AuthContext";
 import { toast } from "sonner";
 import NineBoxMatrixCard from "@/components/NineBoxMatrixCard";
 
+const cardClass = "rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]";
+const inputClass = "w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8";
+const panelClass = "rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4";
+
 function ScoreBreakdownCard({ scoreData }) {
   if (!scoreData) return null;
-
+  const sections = [
+    ["Self Scores", "self"],
+    ["RM Scores", "rm"],
+    ["Skip Scores", "skip"],
+    ["Peer Scores", "peer"]
+  ];
   return (
-    <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">
-        Score Result
-      </h2>
-
+    <div className={cardClass}>
+      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">Score Result</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Self Scores
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            Behavioural: {scoreData.self_behavioural_score ?? "—"}
-          </p>
-          <p className="text-sm text-[#111827]">
-            Performance: {scoreData.self_performance_score ?? "—"}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#111827]">
-            Total: {scoreData.self_score ?? "—"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            RM Scores
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            Behavioural: {scoreData.rm_behavioural_score ?? "—"}
-          </p>
-          <p className="text-sm text-[#111827]">
-            Performance: {scoreData.rm_performance_score ?? "—"}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#111827]">
-            Total: {scoreData.rm_score ?? "—"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Skip Scores
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            Behavioural: {scoreData.skip_behavioural_score ?? "—"}
-          </p>
-          <p className="text-sm text-[#111827]">
-            Performance: {scoreData.skip_performance_score ?? "—"}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#111827]">
-            Total: {scoreData.skip_score ?? "—"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Peer Scores
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            Behavioural: {scoreData.peer_behavioural_score ?? "—"}
-          </p>
-          <p className="text-sm text-[#111827]">
-            Performance: {scoreData.peer_performance_score ?? "—"}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#111827]">
-            Total: {scoreData.peer_score ?? "—"}
-          </p>
-        </div>
+        {sections.map(([title, key]) => (
+          <div key={key} className={panelClass}>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{title}</p>
+            <p className="mt-2 text-sm text-[#111827]">Behavioural: {scoreData[`${key}_behavioural_score`] ?? "—"}</p>
+            <p className="text-sm text-[#111827]">Performance: {scoreData[`${key}_performance_score`] ?? "—"}</p>
+            <p className="mt-1 text-sm font-semibold text-[#111827]">Total: {scoreData[`${key}_score`] ?? "—"}</p>
+          </div>
+        ))}
       </div>
-
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Effective Weights Used
-          </p>
+        <div className={panelClass}>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Effective Weights Used</p>
           <div className="mt-2 space-y-1 text-sm text-[#111827]">
-            <p>Self: {scoreData.effective_self_weight ?? "—"}</p>
-            <p>RM: {scoreData.effective_rm_weight ?? "—"}</p>
-            <p>Skip: {scoreData.effective_skip_weight ?? "—"}</p>
-            <p>Peer: {scoreData.effective_peer_weight ?? "—"}</p>
+            {["self", "rm", "skip", "peer"].map(key => <p key={key}>{key === "rm" ? "RM" : key.charAt(0).toUpperCase() + key.slice(1)}: {scoreData[`effective_${key}_weight`] ?? "—"}</p>)}
           </div>
         </div>
-
         <div className="rounded-2xl border border-gray-200 bg-[#FFF7F4] p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Final Scores
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            System Final Score:{" "}
-            <span className="font-semibold">{scoreData.system_final_score ?? "—"}</span>
-          </p>
-          <p className="text-sm text-[#111827]">
-            HR Override Score:{" "}
-            <span className="font-semibold">{scoreData.hr_override_score ?? "—"}</span>
-          </p>
-          <p className="text-sm text-[#111827]">
-            Effective Final Score:{" "}
-            <span className="font-semibold">{scoreData.final_effective_score ?? "—"}</span>
-          </p>
-          <p className="mt-2 text-sm text-[#111827]">
-            Released To Employee:{" "}
-            <span className="font-semibold">
-              {scoreData.is_released_to_employee ? "Yes" : "No"}
-            </span>
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Final Scores</p>
+          <p className="mt-2 text-sm text-[#111827]">System Final Score: <span className="font-semibold">{scoreData.system_final_score ?? "—"}</span></p>
+          <p className="text-sm text-[#111827]">HR Override Score: <span className="font-semibold">{scoreData.hr_override_score ?? "—"}</span></p>
+          <p className="text-sm text-[#111827]">Effective Final Score: <span className="font-semibold">{scoreData.final_effective_score ?? "—"}</span></p>
+          <p className="mt-2 text-sm text-[#111827]">Released To Employee: <span className="font-semibold">{scoreData.is_released_to_employee ? "Yes" : "No"}</span></p>
         </div>
       </div>
     </div>
@@ -120,125 +50,52 @@ function ScoreBreakdownCard({ scoreData }) {
 
 function AppraisalRecommendationCard({ appraisalData }) {
   if (!appraisalData) return null;
-
   return (
-    <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">
-        Appraisal Recommendation
-      </h2>
-
+    <div className={cardClass}>
+      <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">Appraisal Recommendation</h2>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Classification Used
-          </p>
-          <p className="mt-2 text-lg font-semibold text-[#111827]">
-            {appraisalData.box_label ?? "—"}
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Classification Used</p>
+          <p className="mt-2 text-lg font-semibold text-[#111827]">{appraisalData.box_label ?? "—"}</p>
           <div className="mt-3 space-y-2 text-sm text-[#111827]">
-            <p>
-              PPI Score Used:{" "}
-              <span className="font-semibold">{appraisalData.ppi_score_used ?? "—"}</span>
-            </p>
-            <p>
-              Potential Score Used:{" "}
-              <span className="font-semibold">{appraisalData.potential_score_used ?? "—"}</span>
-            </p>
+            <p>PPI Score Used: <span className="font-semibold">{appraisalData.ppi_score_used ?? "—"}</span></p>
+            <p>Potential Score Used: <span className="font-semibold">{appraisalData.potential_score_used ?? "—"}</span></p>
           </div>
         </div>
-
         <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            Configured Range
-          </p>
-          <p className="mt-2 text-lg font-semibold text-[#111827]">
-            {appraisalData.min_appraisal_percent ?? "—"}% - {appraisalData.max_appraisal_percent ?? "—"}%
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Configured Range</p>
+          <p className="mt-2 text-lg font-semibold text-[#111827]">{appraisalData.min_appraisal_percent ?? "—"}% - {appraisalData.max_appraisal_percent ?? "—"}%</p>
           <div className="mt-3 space-y-2 text-sm text-[#111827]">
-            <p>
-              Suggested Appraisal:{" "}
-              <span className="font-semibold">
-                {appraisalData.suggested_appraisal_percent ?? "—"}%
-              </span>
-            </p>
-            <p>
-              Final Effective Appraisal:{" "}
-              <span className="font-semibold">
-                {appraisalData.final_effective_appraisal_percent ?? "—"}%
-              </span>
-            </p>
+            <p>Suggested Appraisal: <span className="font-semibold">{appraisalData.suggested_appraisal_percent ?? "—"}%</span></p>
+            <p>Final Effective Appraisal: <span className="font-semibold">{appraisalData.final_effective_appraisal_percent ?? "—"}%</span></p>
           </div>
         </div>
       </div>
-
       <div className="mt-4 rounded-2xl border border-[#F6490D]/15 bg-[#FFF7F4] p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-          Override Status
-        </p>
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Override Status</p>
         <div className="mt-3 space-y-2 text-sm text-[#111827]">
-          <p>
-            HR Override Percent:{" "}
-            <span className="font-semibold">{appraisalData.hr_override_percent ?? "—"}</span>
-            {appraisalData.hr_override_percent != null ? "%" : ""}
-          </p>
-          <p>
-            Override Reason:{" "}
-            <span className="font-semibold">{appraisalData.override_reason ?? "—"}</span>
-          </p>
-          <p>
-            Overridden By:{" "}
-            <span className="font-semibold">{appraisalData.overridden_by ?? "—"}</span>
-          </p>
+          <p>HR Override Percent: <span className="font-semibold">{appraisalData.hr_override_percent ?? "—"}</span>{appraisalData.hr_override_percent != null ? "%" : ""}</p>
+          <p>Override Reason: <span className="font-semibold">{appraisalData.override_reason ?? "—"}</span></p>
+          <p>Overridden By: <span className="font-semibold">{appraisalData.overridden_by ?? "—"}</span></p>
         </div>
       </div>
     </div>
   );
 }
 
-function WorkflowActionCard({
-  title,
-  description,
-  badge,
-  primaryLabel,
-  secondaryLabel,
-  onPrimaryClick,
-  onSecondaryClick,
-  primaryDisabled = false,
-  secondaryDisabled = false,
-  primaryLoading = false,
-  secondaryLoading = false,
-}) {
+function WorkflowActionCard({ title, description, badge, primaryLabel, secondaryLabel, onPrimaryClick, onSecondaryClick, primaryDisabled = false, secondaryDisabled = false, primaryLoading = false, secondaryLoading = false }) {
   return (
     <div className="group rounded-2xl bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
       <div className="mb-4 flex items-start justify-between gap-4">
         <h3 className="text-lg font-semibold text-[#111827]">{title}</h3>
-
-        {/* {badge && (
-          <span className="rounded-full bg-[#FFF1EC] px-3 py-1 text-xs font-medium text-[#F6490D]">
-            {badge}
-          </span>
-        )} */}
       </div>
-
       <p className="mb-6 text-sm leading-relaxed text-gray-600">{description}</p>
-
-            <div className="flex items-center gap-6 text-sm font-medium">
-        <button
-          onClick={onPrimaryClick}
-          disabled={primaryDisabled}
-          className="group flex items-center gap-1 text-[#F6490D] transition hover:gap-2 disabled:opacity-40"
-        >
-          {primaryLoading ? "Processing..." : primaryLabel}
-          <span className="transition-transform group-hover:translate-x-1">→</span>
+      <div className="flex items-center gap-6 text-sm font-medium">
+        <button onClick={onPrimaryClick} disabled={primaryDisabled} className="group flex items-center gap-1 text-[#F6490D] transition hover:gap-2 disabled:opacity-40">
+          {primaryLoading ? "Processing..." : primaryLabel}<span className="transition-transform group-hover:translate-x-1">→</span>
         </button>
-
-        <button
-          onClick={onSecondaryClick}
-          disabled={secondaryDisabled}
-          className="group flex items-center gap-1 text-[#111827] transition hover:gap-2 disabled:opacity-40"
-        >
-          {secondaryLoading ? "Loading..." : secondaryLabel}
-          <span className="transition-transform group-hover:translate-x-1">→</span>
+        <button onClick={onSecondaryClick} disabled={secondaryDisabled} className="group flex items-center gap-1 text-[#111827] transition hover:gap-2 disabled:opacity-40">
+          {secondaryLoading ? "Loading..." : secondaryLabel}<span className="transition-transform group-hover:translate-x-1">→</span>
         </button>
       </div>
     </div>
@@ -247,33 +104,25 @@ function WorkflowActionCard({
 
 export default function AdminScoringPage() {
   const { user, accessToken, loading: authLoading } = useAuth();
-
   const [questionnaires, setQuestionnaires] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState(null);
-
   const [scoreData, setScoreData] = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [fetchingScore, setFetchingScore] = useState(false);
-
   const [overrideScore, setOverrideScore] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [overriding, setOverriding] = useState(false);
   const [releasing, setReleasing] = useState(false);
-
   const [ppiData, setPpiData] = useState(null);
   const [calculatingPPI, setCalculatingPPI] = useState(false);
   const [fetchingPPI, setFetchingPPI] = useState(false);
-
   const [potentialData, setPotentialData] = useState(null);
   const [calculatingPotential, setCalculatingPotential] = useState(false);
   const [fetchingPotential, setFetchingPotential] = useState(false);
-
   const [nineBoxData, setNineBoxData] = useState(null);
   const [generatingNineBox, setGeneratingNineBox] = useState(false);
   const [fetchingNineBox, setFetchingNineBox] = useState(false);
-
   const [appraisalData, setAppraisalData] = useState(null);
   const [generatingAppraisal, setGeneratingAppraisal] = useState(false);
   const [fetchingAppraisal, setFetchingAppraisal] = useState(false);
@@ -289,101 +138,41 @@ export default function AdminScoringPage() {
   const [fetchingAnalyticsRelease, setFetchingAnalyticsRelease] = useState(false);
   const [updatingAnalyticsRelease, setUpdatingAnalyticsRelease] = useState(false);
   const [questionnaireQuery, setQuestionnaireQuery] = useState("");
-  const [filteredQuestionnaires, setFilteredQuestionnaires] = useState([]);
   const [showQuestionnaireResults, setShowQuestionnaireResults] = useState(false);
-
   const isAdminScoringUser = String(user?.employee_number || "") === "100607";
 
-  useEffect(() => {
+  const filteredQuestionnaires = questionnaires.filter(q => {
     const query = questionnaireQuery.trim().toLowerCase();
-  
-    if (!query) {
-      setFilteredQuestionnaires(questionnaires);
-      return;
-    }
-  
-    const filtered = questionnaires.filter((q) => {
-      const employeeName = String(q.employee_name || "").toLowerCase();
-      const employeeNumber = String(q.employee_number || "").toLowerCase();
-      const department = String(q.department || "").toLowerCase();
-      const cycle = String(q.cycle || "").toLowerCase();
-  
-      return (
-        employeeName.includes(query) ||
-        employeeNumber.includes(query) ||
-        department.includes(query) ||
-        cycle.includes(query)
-      );
-    });
-  
-    setFilteredQuestionnaires(filtered);
-  }, [questionnaireQuery, questionnaires]);
+    if (!query) return true;
+    return [q.employee_name, q.employee_number, q.department, q.review_cycle, q.cycle, q.questionnaire_id].some(value => String(value ?? "").toLowerCase().includes(query));
+  });
 
   async function handleSelectQuestionnaire(selected) {
     setSelectedQuestionnaire(selected || null);
-  
-    setQuestionnaireQuery(
-      selected
-        ? `${selected.employee_name} (${selected.employee_number})`
-        : ""
-    );
-  
+    setQuestionnaireQuery(selected ? `${selected.employee_name} (${selected.employee_number})` : "");
     setShowQuestionnaireResults(false);
-  
-    setScoreData(null);
-    setOverrideScore("");
-    setOverrideReason("");
-  
-    setPpiData(null);
-    setPotentialData(null);
-    setNineBoxData(null);
-    setAppraisalData(null);
-  
-    setAppraisalOverridePercent("");
-    setAppraisalOverrideReason("");
-  
-    setShowScoreCard(false);
-    setShowPpiCard(false);
-    setShowPotentialCard(false);
-    setShowNineBoxCard(false);
-    setShowAppraisalCard(false);
-  
+    setScoreData(null); setOverrideScore(""); setOverrideReason("");
+    setPpiData(null); setPotentialData(null); setNineBoxData(null); setAppraisalData(null);
+    setAppraisalOverridePercent(""); setAppraisalOverrideReason("");
+    setShowScoreCard(false); setShowPpiCard(false); setShowPotentialCard(false); setShowNineBoxCard(false); setShowAppraisalCard(false);
     setAnalyticsReleaseData(null);
-  
     if (selected?.questionnaire_id) {
-      await Promise.allSettled([
-        fetchAnalyticsReleaseStatus(selected.questionnaire_id),
-        preloadAvailability(selected),
-      ]);
+      await Promise.allSettled([fetchAnalyticsReleaseStatus(selected.questionnaire_id), preloadAvailability(selected)]);
     }
   }
 
   async function refreshAll(questionnaireId) {
     if (!questionnaireId) return;
-  
-    await Promise.allSettled([
-      loadQuestionnaires(),
-      fetchAnalyticsReleaseStatus(questionnaireId),
-    ]);
+    await Promise.allSettled([loadQuestionnaires(), fetchAnalyticsReleaseStatus(questionnaireId)]);
   }
 
   async function loadQuestionnaires() {
     try {
       setLoading(true);
-
-      const res = await fetch("/api/scoring/admin/questionnaires", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch("/api/scoring/admin/questionnaires", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to load questionnaires.");
-      }
-
-      setQuestionnaires(Array.isArray(data?.results) ? data.results : []);
+      if (!res.ok) throw new Error(data?.error || "Failed to load questionnaires.");
+      setQuestionnaires(Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : []);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to load scoring console.");
@@ -394,82 +183,44 @@ export default function AdminScoringPage() {
   }
 
   useEffect(() => {
-    if (accessToken && isAdminScoringUser) {
-      loadQuestionnaires();
+    if (accessToken && isAdminScoringUser) loadQuestionnaires();
+    else if (!authLoading) setLoading(false);
+  }, [accessToken, isAdminScoringUser, authLoading]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (!event.target.closest("[data-questionnaire-search]")) setShowQuestionnaireResults(false);
     }
-  }, [accessToken, isAdminScoringUser]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   async function fetchScoreResult(questionnaireId, options = {}) {
     const { silent = false } = options;
-
     try {
       setFetchingScore(true);
-
-      const res = await fetch(`/api/scoring/result/${questionnaireId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/result/${questionnaireId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to load score result.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to load score result.");
       setScoreData(data);
       setOverrideScore(data?.hr_override_score ?? "");
       setOverrideReason(data?.override_reason ?? "");
-
-      if (!silent) {
-        setShowScoreCard(true);
-      }
+      if (!silent) setShowScoreCard(true);
     } catch (error) {
       if (!silent) {
         console.error(error);
         toast.error(error.message || "Failed to load score result.");
-        setScoreData(null);
-        setOverrideScore("");
-        setOverrideReason("");
-        setShowScoreCard(false);
+        setScoreData(null); setOverrideScore(""); setOverrideReason(""); setShowScoreCard(false);
       }
-    } finally {
-      setFetchingScore(false);
-    }
+    } finally { setFetchingScore(false); }
   }
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      const target = event.target;
-      if (!target.closest("[data-questionnaire-search]")) {
-        setShowQuestionnaireResults(false);
-      }
-    }
-  
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
 
   async function calculateScore(questionnaireId) {
     try {
       setCalculating(true);
-
-      const res = await fetch(`/api/scoring/calculate/${questionnaireId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/calculate/${questionnaireId}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to calculate score.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to calculate score.");
       toast.success("Score calculated successfully.");
       setScoreData(data);
       setOverrideScore(data?.hr_override_score ?? "");
@@ -478,1099 +229,411 @@ export default function AdminScoringPage() {
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to calculate score.");
-    } finally {
-      setCalculating(false);
-    }
+    } finally { setCalculating(false); }
   }
 
   async function calculatePPI(questionnaireId) {
     try {
       setCalculatingPPI(true);
-
-      const res = await fetch(`/api/scoring/ppi/calculate/${questionnaireId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/ppi/calculate/${questionnaireId}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to calculate PPI.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to calculate PPI.");
       toast.success("PPI calculated successfully.");
       await fetchPPIResult(questionnaireId);
       await refreshAll(questionnaireId);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to calculate PPI.");
-    } finally {
-      setCalculatingPPI(false);
-    }
+    } finally { setCalculatingPPI(false); }
   }
 
   async function fetchPPIResult(questionnaireId, options = {}) {
     const { silent = false } = options;
-
     try {
       setFetchingPPI(true);
-
-      const res = await fetch(`/api/scoring/ppi/result/${questionnaireId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/ppi/result/${questionnaireId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "PPI not calculated yet.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "PPI not calculated yet.");
       setPpiData(data);
-
-      if (!silent) {
-        setShowPpiCard(true);
-      }
+      if (!silent) setShowPpiCard(true);
     } catch (error) {
-      if (!silent) {
-        console.error(error);
-        toast.error(error.message || "Failed to load PPI result.");
-      }
-      if (!silent) {
-        setShowPpiCard(false);
-      }
-    } finally {
-      setFetchingPPI(false);
-    }
+      if (!silent) { console.error(error); toast.error(error.message || "Failed to load PPI result."); setShowPpiCard(false); }
+    } finally { setFetchingPPI(false); }
   }
-
 
   async function calculatePotential(assessmentId) {
     try {
       setCalculatingPotential(true);
-
-      const res = await fetch(`/api/scoring/potential/calculate/${assessmentId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/potential/calculate/${assessmentId}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to calculate potential score.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to calculate potential score.");
       toast.success("Potential score calculated successfully.");
       await fetchPotentialResult(assessmentId);
-      if (selectedQuestionnaire?.questionnaire_id) {
-        await refreshAll(selectedQuestionnaire.questionnaire_id);
-      }
+      if (selectedQuestionnaire?.questionnaire_id) await refreshAll(selectedQuestionnaire.questionnaire_id);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to calculate potential score.");
-    } finally {
-      setCalculatingPotential(false);
-    }
+    } finally { setCalculatingPotential(false); }
   }
-
 
   async function fetchPotentialResult(assessmentId, options = {}) {
     const { silent = false } = options;
-
     try {
       setFetchingPotential(true);
-
-      const res = await fetch(`/api/scoring/potential/result/${assessmentId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/potential/result/${assessmentId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Potential result not available yet.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Potential result not available yet.");
       setPotentialData(data);
-
-      if (!silent) {
-        setShowPotentialCard(true);
-      }
+      if (!silent) setShowPotentialCard(true);
     } catch (error) {
-      if (!silent) {
-        console.error(error);
-        toast.error(error.message || "Failed to load potential result.");
-      }
-      if (!silent) {
-        setShowPotentialCard(false);
-      }
-    } finally {
-      setFetchingPotential(false);
-    }
+      if (!silent) { console.error(error); toast.error(error.message || "Failed to load potential result."); setShowPotentialCard(false); }
+    } finally { setFetchingPotential(false); }
   }
-
 
   async function generateNineBox(questionnaireId) {
     try {
       setGeneratingNineBox(true);
-
-      const res = await fetch(`/api/scoring/ninebox/generate/${questionnaireId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/ninebox/generate/${questionnaireId}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to generate 9-box placement.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to generate 9-box placement.");
       toast.success("9-box placement generated successfully.");
-      setNineBoxData(data);
-      setShowNineBoxCard(true);
+      setNineBoxData(data); setShowNineBoxCard(true);
       await refreshAll(questionnaireId);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to generate 9-box placement.");
-    } finally {
-      setGeneratingNineBox(false);
-    }
+    } finally { setGeneratingNineBox(false); }
   }
-
 
   async function fetchNineBoxResult(questionnaireId, options = {}) {
     const { silent = false } = options;
-
     try {
       setFetchingNineBox(true);
-
-      const res = await fetch(`/api/scoring/ninebox/result/${questionnaireId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/ninebox/result/${questionnaireId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "9-box result not available yet.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "9-box result not available yet.");
       setNineBoxData(data);
-
-      if (!silent) {
-        setShowNineBoxCard(true);
-      }
+      if (!silent) setShowNineBoxCard(true);
     } catch (error) {
-      if (!silent) {
-        console.error(error);
-        toast.error(error.message || "Failed to load 9-box result.");
-      }
-      if (!silent) {
-        setShowNineBoxCard(false);
-      }
-    } finally {
-      setFetchingNineBox(false);
-    }
+      if (!silent) { console.error(error); toast.error(error.message || "Failed to load 9-box result."); setShowNineBoxCard(false); }
+    } finally { setFetchingNineBox(false); }
   }
-
 
   async function generateAppraisal(questionnaireId) {
     try {
       setGeneratingAppraisal(true);
-
-      const res = await fetch(`/api/scoring/appraisal/generate/${questionnaireId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/appraisal/generate/${questionnaireId}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to generate appraisal recommendation.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to generate appraisal recommendation.");
       toast.success("Appraisal recommendation generated successfully.");
-      setAppraisalData(data);
-      setShowAppraisalCard(true);
+      setAppraisalData(data); setShowAppraisalCard(true);
       await refreshAll(questionnaireId);
       setAppraisalOverridePercent(data?.hr_override_percent ?? "");
       setAppraisalOverrideReason(data?.override_reason ?? "");
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to generate appraisal recommendation.");
-    } finally {
-      setGeneratingAppraisal(false);
-    }
+    } finally { setGeneratingAppraisal(false); }
   }
-
 
   async function fetchAppraisalResult(questionnaireId, options = {}) {
     const { silent = false } = options;
-
     try {
       setFetchingAppraisal(true);
-
-      const res = await fetch(`/api/scoring/appraisal/result/${questionnaireId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
+      const res = await fetch(`/api/scoring/appraisal/result/${questionnaireId}`, { headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Appraisal recommendation not available yet.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Appraisal recommendation not available yet.");
       setAppraisalData(data);
       setAppraisalOverridePercent(data?.hr_override_percent ?? "");
       setAppraisalOverrideReason(data?.override_reason ?? "");
-
-      if (!silent) {
-        setShowAppraisalCard(true);
-      }
+      if (!silent) setShowAppraisalCard(true);
     } catch (error) {
-      if (!silent) {
-        console.error(error);
-        toast.error(error.message || "Failed to load appraisal recommendation.");
-      }
-      if (!silent) {
-        setShowAppraisalCard(false);
-      }
-    } finally {
-      setFetchingAppraisal(false);
-    }
+      if (!silent) { console.error(error); toast.error(error.message || "Failed to load appraisal recommendation."); setShowAppraisalCard(false); }
+    } finally { setFetchingAppraisal(false); }
   }
 
   async function applyAppraisalOverride() {
     if (!selectedQuestionnaire?.questionnaire_id) return;
-
-    if (appraisalOverridePercent === "" || !appraisalOverrideReason.trim()) {
-      toast.error("Please provide both appraisal override percent and reason.");
-      return;
-    }
-
+    if (appraisalOverridePercent === "" || !appraisalOverrideReason.trim()) return toast.error("Please provide both appraisal override percent and reason.");
     try {
       setOverridingAppraisal(true);
-
-      const res = await fetch(
-        `/api/scoring/appraisal/override/${selectedQuestionnaire.questionnaire_id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            hr_override_percent: Number(appraisalOverridePercent),
-            override_reason: appraisalOverrideReason,
-          }),
-        }
-      );
-
+      const res = await fetch(`/api/scoring/appraisal/override/${selectedQuestionnaire.questionnaire_id}`, {
+        method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ hr_override_percent: Number(appraisalOverridePercent), override_reason: appraisalOverrideReason })
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to apply appraisal override.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to apply appraisal override.");
       toast.success("Appraisal override applied successfully.");
       await fetchAppraisalResult(selectedQuestionnaire.questionnaire_id);
       await refreshAll(selectedQuestionnaire.questionnaire_id);
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Failed to apply appraisal override.");
-    } finally {
-      setOverridingAppraisal(false);
-    }
+      console.error(error); toast.error(error.message || "Failed to apply appraisal override.");
+    } finally { setOverridingAppraisal(false); }
   }
-
 
   async function applyOverride() {
     if (!selectedQuestionnaire?.questionnaire_id) return;
-
-    if (overrideScore === "" || !overrideReason.trim()) {
-      toast.error("Please provide both override score and reason.");
-      return;
-    }
-
+    if (overrideScore === "" || !overrideReason.trim()) return toast.error("Please provide both override score and reason.");
     try {
       setOverriding(true);
-
-      const res = await fetch(
-        `/api/scoring/override/${selectedQuestionnaire.questionnaire_id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            hr_override_score: Number(overrideScore),
-            override_reason: overrideReason,
-          }),
-        }
-      );
-
+      const res = await fetch(`/api/scoring/override/${selectedQuestionnaire.questionnaire_id}`, {
+        method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ hr_override_score: Number(overrideScore), override_reason: overrideReason })
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to apply override.");
-      }
-
+      if (!res.ok) throw new Error(data?.error || "Failed to apply override.");
       toast.success("Override applied successfully.");
       await fetchScoreResult(selectedQuestionnaire.questionnaire_id);
       await refreshAll(selectedQuestionnaire.questionnaire_id);
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Failed to apply override.");
-    } finally {
-      setOverriding(false);
-    }
+      console.error(error); toast.error(error.message || "Failed to apply override.");
+    } finally { setOverriding(false); }
   }
-
 
   async function updateReleaseStatus(isReleased) {
     if (!selectedQuestionnaire?.questionnaire_id) return;
-
     try {
       setReleasing(true);
-
-      const res = await fetch(
-        `/api/scoring/release/${selectedQuestionnaire.questionnaire_id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            is_released_to_employee: isReleased,
-          }),
-        }
-      );
-
+      const res = await fetch(`/api/scoring/release/${selectedQuestionnaire.questionnaire_id}`, {
+        method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_released_to_employee: isReleased })
+      });
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to update release status.");
-      }
-
-      toast.success(
-        isReleased
-          ? "Score released to employee successfully."
-          : "Score unreleased successfully."
-      );
-
+      if (!res.ok) throw new Error(data?.error || "Failed to update release status.");
+      toast.success(isReleased ? "Score released to employee successfully." : "Score unreleased successfully.");
       await fetchScoreResult(selectedQuestionnaire.questionnaire_id);
       await loadQuestionnaires();
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Failed to update release status.");
-    } finally {
-      setReleasing(false);
-    }
+      console.error(error); toast.error(error.message || "Failed to update release status.");
+    } finally { setReleasing(false); }
   }
-
 
   async function fetchAnalyticsReleaseStatus(questionnaireId) {
     try {
       setFetchingAnalyticsRelease(true);
-  
-      const res = await fetch(`/api/scoring/analytics-release/${questionnaireId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      });
-  
+      const res = await fetch(`/api/scoring/analytics-release/${questionnaireId}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
       const data = await res.json();
-  
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to load analytics release status.");
-      }
-  
+      if (!res.ok) throw new Error(data?.error || "Failed to load analytics release status.");
       setAnalyticsReleaseData(data);
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Failed to load analytics release status.");
-      setAnalyticsReleaseData(null);
-    } finally {
-      setFetchingAnalyticsRelease(false);
-    }
+      console.error(error); toast.error(error.message || "Failed to load analytics release status."); setAnalyticsReleaseData(null);
+    } finally { setFetchingAnalyticsRelease(false); }
   }
 
   async function preloadAvailability(selected) {
     if (!selected?.questionnaire_id) return;
-
     const tasks = [];
-
-    if (selected?.has_score) {
+    if (selected.has_score) {
       tasks.push(fetchScoreResult(selected.questionnaire_id, { silent: true }));
       tasks.push(fetchPPIResult(selected.questionnaire_id, { silent: true }));
     }
-
-    if (selected?.assessment_id) {
-      tasks.push(fetchPotentialResult(selected.assessment_id, { silent: true }));
-    }
-
+    if (selected.assessment_id) tasks.push(fetchPotentialResult(selected.assessment_id, { silent: true }));
     tasks.push(fetchNineBoxResult(selected.questionnaire_id, { silent: true }));
     tasks.push(fetchAppraisalResult(selected.questionnaire_id, { silent: true }));
-
     await Promise.allSettled(tasks);
   }
-  
+
   async function updateAnalyticsRelease(questionnaireId, isReleased) {
     try {
       setUpdatingAnalyticsRelease(true);
-  
       const res = await fetch(`/api/scoring/analytics-release/toggle/${questionnaireId}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          is_released_to_employee: isReleased,
-        }),
+        method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_released_to_employee: isReleased })
       });
-  
       const data = await res.json();
-  
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to update analytics release status.");
-      }
-  
+      if (!res.ok) throw new Error(data?.error || "Failed to update analytics release status.");
       toast.success(data?.message || "Analytics release status updated.");
       await fetchAnalyticsReleaseStatus(questionnaireId);
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Failed to update analytics release status.");
-    } finally {
-      setUpdatingAnalyticsRelease(false);
-    }
+      console.error(error); toast.error(error.message || "Failed to update analytics release status.");
+    } finally { setUpdatingAnalyticsRelease(false); }
   }
 
-  if (authLoading || loading) {
-    return (
-      <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-        <p className="text-sm text-gray-600">Loading scoring console...</p>
-      </div>
-    );
-  }
-
-  if (!isAdminScoringUser) {
-    return (
-      <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-        <p className="text-sm text-red-600">
-          You are not authorized to access this page.
-        </p>
-      </div>
-    );
-  }
+  if (authLoading || loading) return <div className={cardClass}><p className="text-sm text-gray-600">Loading scoring console...</p></div>;
+  if (!isAdminScoringUser) return <div className={cardClass}><p className="text-sm text-red-600">You are not authorized to access this page.</p></div>;
 
   const selectedAssessmentId = selectedQuestionnaire?.assessment_id || null;
   const hasPotentialAssessment = !!selectedAssessmentId;
   const questionnaireStatus = selectedQuestionnaire?.status || "";
-
-  const canCalculateScore =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    (
-      selectedQuestionnaire?.can_calculate_score ??
-      ["completed", "under_peer_review", "skip_reviewed"].includes(questionnaireStatus)
-    ) &&
-    !calculating;
-
-  const canViewScore =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_score || scoreData) &&
-    !fetchingScore;
-
-  const canCalculatePPI =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_score || scoreData) &&
-    !calculatingPPI;
-
-  const canViewPPI =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_ppi || ppiData) &&
-    !fetchingPPI;
-
-  const canCalculatePotential =
-    hasPotentialAssessment &&
-    (
-      selectedQuestionnaire?.can_calculate_potential ??
-      true
-    ) &&
-    !calculatingPotential;
-
-  const canViewPotential =
-    hasPotentialAssessment &&
-    !!(selectedQuestionnaire?.has_potential_score || potentialData) &&
-    !fetchingPotential;
-
-  const canGenerateNineBox =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_ppi || ppiData) &&
-    !!(selectedQuestionnaire?.has_potential_score || potentialData) &&
-    !generatingNineBox;
-
-  const canViewNineBox =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_nine_box || nineBoxData) &&
-    !fetchingNineBox;
-
-  const canGenerateAppraisal =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_nine_box || nineBoxData) &&
-    !generatingAppraisal;
-
-  const canViewAppraisal =
-    !!selectedQuestionnaire?.questionnaire_id &&
-    !!(selectedQuestionnaire?.has_appraisal || appraisalData) &&
-    !fetchingAppraisal;
+  const canCalculateScore = !!selectedQuestionnaire?.questionnaire_id && (selectedQuestionnaire?.can_calculate_score ?? ["completed", "under_peer_review", "skip_reviewed"].includes(questionnaireStatus)) && !calculating;
+  const canViewScore = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_score || scoreData) && !fetchingScore;
+  const canCalculatePPI = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_score || scoreData) && !calculatingPPI;
+  const canViewPPI = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_ppi || ppiData) && !fetchingPPI;
+  const canCalculatePotential = hasPotentialAssessment && (selectedQuestionnaire?.can_calculate_potential ?? true) && !calculatingPotential;
+  const canViewPotential = hasPotentialAssessment && !!(selectedQuestionnaire?.has_potential_score || potentialData) && !fetchingPotential;
+  const canGenerateNineBox = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_ppi || ppiData) && !!(selectedQuestionnaire?.has_potential_score || potentialData) && !generatingNineBox;
+  const canViewNineBox = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_nine_box || nineBoxData) && !fetchingNineBox;
+  const canGenerateAppraisal = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_nine_box || nineBoxData) && !generatingAppraisal;
+  const canViewAppraisal = !!selectedQuestionnaire?.questionnaire_id && !!(selectedQuestionnaire?.has_appraisal || appraisalData) && !fetchingAppraisal;
 
   return (
+    <section className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      <div className={cardClass}>
+        <h1 className="text-3xl font-semibold tracking-tight text-[#111827]">Scoring Console</h1>
+        <p className="mt-2 text-sm text-gray-600">Admin scoring view for score, PPI, potential, 9-box placement, and appraisal recommendation.</p>
+      </div>
 
-      <section className="mx-auto max-w-6xl space-y-8 px-6 py-8">
-        <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-          <h1 className="text-3xl font-semibold tracking-tight text-[#111827]">
-            Scoring Console
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Admin scoring view for score, PPI, potential, 9-box placement, and appraisal recommendation.
-          </p>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-          <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">
-            Questionnaire Selection
-          </h2>
-
-          <div className="space-y-4">
-            <div className="relative" data-questionnaire-search>
-              <input
-                type="text"
-                value={questionnaireQuery}
-                onChange={(e) => {
-                  setQuestionnaireQuery(e.target.value);
-                  setShowQuestionnaireResults(true);
-
-                  if (!e.target.value.trim()) {
-                    setSelectedQuestionnaire(null);
-                    setScoreData(null);
-                    setOverrideScore("");
-                    setOverrideReason("");
-                    setPpiData(null);
-                    setPotentialData(null);
-                    setNineBoxData(null);
-                    setAppraisalData(null);
-                    setAppraisalOverridePercent("");
-                    setAppraisalOverrideReason("");
-                    setShowScoreCard(false);
-                    setShowPpiCard(false);
-                    setShowPotentialCard(false);
-                    setShowNineBoxCard(false);
-                    setShowAppraisalCard(false);
-                    setAnalyticsReleaseData(null);
-                  }
-                }}
-                onFocus={() => setShowQuestionnaireResults(true)}
-                placeholder="Search by employee name, employee number, department, or cycle"
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8"
-              />
-
-              {showQuestionnaireResults && (
-                <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-                  {filteredQuestionnaires.length > 0 ? (
-                    filteredQuestionnaires.map((q) => (
-                      <button
-                          key={q.questionnaire_id}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectQuestionnaire(q);
-                          }}
-                          className="flex w-full items-start justify-between gap-4 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 last:border-b-0"
-                        >
-                        <div>
-                          <p className="text-sm font-medium text-[#111827]">
-                            {q.employee_name} ({q.employee_number})
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {q.department || "—"} • {q.cycle || "—"}
-                          </p>
-                        </div>
-
-                        <span className="mt-0.5 rounded-full bg-[#FFF1EC] px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-[#F6490D]">
-                          {String(q.status || "—").replaceAll("_", " ")}
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-sm text-gray-500">
-                      No matching questionnaires found.
+      <div className={cardClass}>
+        <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">Questionnaire Selection</h2>
+        <div className="space-y-4">
+          <div className="relative" data-questionnaire-search>
+            <input type="text" value={questionnaireQuery} onChange={e => {
+              setQuestionnaireQuery(e.target.value); setShowQuestionnaireResults(true);
+              if (!e.target.value.trim()) {
+                setSelectedQuestionnaire(null); setScoreData(null); setOverrideScore(""); setOverrideReason("");
+                setPpiData(null); setPotentialData(null); setNineBoxData(null); setAppraisalData(null);
+                setAppraisalOverridePercent(""); setAppraisalOverrideReason("");
+                setShowScoreCard(false); setShowPpiCard(false); setShowPotentialCard(false); setShowNineBoxCard(false); setShowAppraisalCard(false);
+                setAnalyticsReleaseData(null);
+              }
+            }} onFocus={() => setShowQuestionnaireResults(true)} placeholder="Search by employee name, employee number, department, or cycle" className={inputClass} />
+            {showQuestionnaireResults && (
+              <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                {filteredQuestionnaires.length ? filteredQuestionnaires.map(q => (
+                  <button key={q.questionnaire_id} type="button" onMouseDown={e => { e.preventDefault(); handleSelectQuestionnaire(q); }} className="flex w-full items-start justify-between gap-4 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 last:border-b-0">
+                    <div>
+                      <p className="text-sm font-medium text-[#111827]">{q.employee_name} ({q.employee_number})</p>
+                      <p className="text-xs text-gray-500">{q.department || "—"} • {q.review_cycle || q.cycle || "—"}</p>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {selectedQuestionnaire && (
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-sm font-medium text-[#111827]">
-                  {selectedQuestionnaire.employee_name} ({selectedQuestionnaire.employee_number})
-                </p>
-
-                <div className="mt-2 space-y-1 text-sm text-gray-600">
-                  <p>Questionnaire ID: {selectedQuestionnaire.questionnaire_id}</p>
-                  <p>Department: {selectedQuestionnaire.department || "—"}</p>
-                  <p>Cycle: {selectedQuestionnaire.cycle || "—"}</p>
-                  <p>Status: {selectedQuestionnaire.status || "—"}</p>
-                  <p>Score Exists: {selectedQuestionnaire.has_score ? "Yes" : "No"}</p>
-                  <p>Potential Assessment ID: {selectedAssessmentId || "Not available yet"}</p>
-                </div>
-
-                <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  <WorkflowActionCard
-                    title="Score Engine"
-                    description="Calculate and inspect the weighted performance score using self, RM, skip, and peer review inputs."
-                    badge={scoreData ? "Ready" : "Pending"}
-                    primaryLabel={calculating ? "Calculating..." : "Calculate Score"}
-                    secondaryLabel={fetchingScore ? "Loading..." : "View Score"}
-                    onPrimaryClick={() => calculateScore(selectedQuestionnaire.questionnaire_id)}
-                    onSecondaryClick={() => fetchScoreResult(selectedQuestionnaire.questionnaire_id)}
-                    primaryDisabled={!canCalculateScore}
-                    secondaryDisabled={!canViewScore}
-                    primaryLoading={calculating}
-                    secondaryLoading={fetchingScore}
-                  />
-
-                  <WorkflowActionCard
-                    title="PPI Engine"
-                    description="Compute the Past Performance Index using current and previous review cycle score history."
-                    badge={ppiData ? "Ready" : "Pending"}
-                    primaryLabel={
-                      calculatingPPI
-                        ? "Calculating..."
-                        : canCalculatePPI
-                        ? "Calculate PPI"
-                        : "PPI Locked"
-                    }
-                    secondaryLabel={fetchingPPI ? "Loading..." : "View PPI"}
-                    onPrimaryClick={() => calculatePPI(selectedQuestionnaire.questionnaire_id)}
-                    onSecondaryClick={() => fetchPPIResult(selectedQuestionnaire.questionnaire_id)}
-                    primaryDisabled={!canCalculatePPI}
-                    secondaryDisabled={!canViewPPI}
-                    primaryLoading={calculatingPPI}
-                    secondaryLoading={fetchingPPI}
-                  />
-
-                  <WorkflowActionCard
-                    title="Potential Engine"
-                    description="Generate the future-readiness score from RM and skip-level potential questionnaire evaluations."
-                    badge={potentialData ? "Ready" : hasPotentialAssessment ? "Available" : "Unavailable"}
-                    primaryLabel={
-                      calculatingPotential
-                        ? "Calculating..."
-                        : canCalculatePotential
-                        ? "Calculate Potential"
-                        : "Potential Locked"
-                    }
-                    secondaryLabel={fetchingPotential ? "Loading..." : "View Potential"}
-                    onPrimaryClick={() => calculatePotential(selectedAssessmentId)}
-                    onSecondaryClick={() => fetchPotentialResult(selectedAssessmentId)}
-                    primaryDisabled={!canCalculatePotential}
-                    secondaryDisabled={!canViewPotential}
-                    primaryLoading={calculatingPotential}
-                    secondaryLoading={fetchingPotential}
-                  />
-
-                  <WorkflowActionCard
-                    title="9-Box Matrix"
-                    description="Map the employee onto the 9-box talent grid using PPI on X-axis and Potential Score on Y-axis."
-                    badge={nineBoxData ? "Ready" : "Pending"}
-                    primaryLabel={
-                      generatingNineBox
-                        ? "Generating..."
-                        : canGenerateNineBox
-                        ? "Generate 9-Box"
-                        : "9-Box Locked"
-                    }
-                    secondaryLabel={fetchingNineBox ? "Loading..." : "View 9-Box"}
-                    onPrimaryClick={() => generateNineBox(selectedQuestionnaire.questionnaire_id)}
-                    onSecondaryClick={() => fetchNineBoxResult(selectedQuestionnaire.questionnaire_id)}
-                    primaryDisabled={!canGenerateNineBox}
-                    secondaryDisabled={!canViewNineBox}
-                    primaryLoading={generatingNineBox}
-                    secondaryLoading={fetchingNineBox}
-                  />
-
-                  <WorkflowActionCard
-                    title="Appraisal Engine"
-                    description="Generate the recommended appraisal percentage using the employee’s 9-box placement and configured range rules."
-                    badge={appraisalData ? "Ready" : "Pending"}
-                    primaryLabel={
-                      generatingAppraisal
-                        ? "Generating..."
-                        : canGenerateAppraisal
-                        ? "Generate Appraisal"
-                        : "Appraisal Locked"
-                    }
-                    secondaryLabel={fetchingAppraisal ? "Loading..." : "View Appraisal"}
-                    onPrimaryClick={() => generateAppraisal(selectedQuestionnaire.questionnaire_id)}
-                    onSecondaryClick={() => fetchAppraisalResult(selectedQuestionnaire.questionnaire_id)}
-                    primaryDisabled={!canGenerateAppraisal}
-                    secondaryDisabled={!canViewAppraisal}
-                    primaryLoading={generatingAppraisal}
-                    secondaryLoading={fetchingAppraisal}
-                  />
-                </div>
-
-                {!hasPotentialAssessment && (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    Potential admin controls need <span className="font-semibold">assessment_id</span> from the backend admin questionnaire list. Once that field is included in the response, these buttons will work.
-                  </div>
-                )}
+                    <span className="mt-0.5 rounded-full bg-[#FFF1EC] px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-[#F6490D]">{String(q.status || "—").replaceAll("_", " ")}</span>
+                  </button>
+                )) : <div className="px-4 py-3 text-sm text-gray-500">No matching questionnaires found.</div>}
               </div>
             )}
           </div>
-        </div>
+
           {selectedQuestionnaire && (
-            <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-              <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">
-                Analytics Release Controls
-              </h2>
+            <div className={panelClass}>
+              <p className="text-sm font-medium text-[#111827]">{selectedQuestionnaire.employee_name} ({selectedQuestionnaire.employee_number})</p>
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
+                <p>Questionnaire ID: {selectedQuestionnaire.questionnaire_id}</p>
+                <p>Department: {selectedQuestionnaire.department || "—"}</p>
+                <p>Cycle: {selectedQuestionnaire.review_cycle || selectedQuestionnaire.cycle || "—"}</p>
+                <p>Status: {selectedQuestionnaire.status || "—"}</p>
+                <p>Score Exists: {selectedQuestionnaire.has_score ? "Yes" : "No"}</p>
+                <p>Potential Assessment ID: {selectedAssessmentId || "Not available yet"}</p>
+              </div>
 
-              {!analyticsReleaseData ? (
-                <p className="text-sm text-gray-600">
-                  {fetchingAnalyticsRelease
-                    ? "Loading analytics release status..."
-                    : "Analytics release status not loaded."}
-                </p>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Current Status
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-[#111827]">
-                      {analyticsReleaseData.is_released_to_employee ? "Released" : "Not Released"}
-                    </p>
+              <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <WorkflowActionCard title="Score Engine" description="Calculate and inspect the weighted performance score using self, RM, skip, and peer review inputs." badge={scoreData ? "Ready" : "Pending"} primaryLabel={calculating ? "Calculating..." : "Calculate Score"} secondaryLabel={fetchingScore ? "Loading..." : "View Score"} onPrimaryClick={() => calculateScore(selectedQuestionnaire.questionnaire_id)} onSecondaryClick={() => fetchScoreResult(selectedQuestionnaire.questionnaire_id)} primaryDisabled={!canCalculateScore} secondaryDisabled={!canViewScore} primaryLoading={calculating} secondaryLoading={fetchingScore} />
+                <WorkflowActionCard title="PPI Engine" description="Compute the Past Performance Index using current and previous review cycle score history." badge={ppiData ? "Ready" : "Pending"} primaryLabel={calculatingPPI ? "Calculating..." : canCalculatePPI ? "Calculate PPI" : "PPI Locked"} secondaryLabel={fetchingPPI ? "Loading..." : "View PPI"} onPrimaryClick={() => calculatePPI(selectedQuestionnaire.questionnaire_id)} onSecondaryClick={() => fetchPPIResult(selectedQuestionnaire.questionnaire_id)} primaryDisabled={!canCalculatePPI} secondaryDisabled={!canViewPPI} primaryLoading={calculatingPPI} secondaryLoading={fetchingPPI} />
+                <WorkflowActionCard title="Potential Engine" description="Generate the future-readiness score from RM and skip-level potential questionnaire evaluations." badge={potentialData ? "Ready" : hasPotentialAssessment ? "Available" : "Unavailable"} primaryLabel={calculatingPotential ? "Calculating..." : canCalculatePotential ? "Calculate Potential" : "Potential Locked"} secondaryLabel={fetchingPotential ? "Loading..." : "View Potential"} onPrimaryClick={() => calculatePotential(selectedAssessmentId)} onSecondaryClick={() => fetchPotentialResult(selectedAssessmentId)} primaryDisabled={!canCalculatePotential} secondaryDisabled={!canViewPotential} primaryLoading={calculatingPotential} secondaryLoading={fetchingPotential} />
+                <WorkflowActionCard title="9-Box Matrix" description="Map the employee onto the 9-box talent grid using PPI on X-axis and Potential Score on Y-axis." badge={nineBoxData ? "Ready" : "Pending"} primaryLabel={generatingNineBox ? "Generating..." : canGenerateNineBox ? "Generate 9-Box" : "9-Box Locked"} secondaryLabel={fetchingNineBox ? "Loading..." : "View 9-Box"} onPrimaryClick={() => generateNineBox(selectedQuestionnaire.questionnaire_id)} onSecondaryClick={() => fetchNineBoxResult(selectedQuestionnaire.questionnaire_id)} primaryDisabled={!canGenerateNineBox} secondaryDisabled={!canViewNineBox} primaryLoading={generatingNineBox} secondaryLoading={fetchingNineBox} />
+                <WorkflowActionCard title="Appraisal Engine" description="Generate the recommended appraisal percentage using the employee’s 9-box placement and configured range rules." badge={appraisalData ? "Ready" : "Pending"} primaryLabel={generatingAppraisal ? "Generating..." : canGenerateAppraisal ? "Generate Appraisal" : "Appraisal Locked"} secondaryLabel={fetchingAppraisal ? "Loading..." : "View Appraisal"} onPrimaryClick={() => generateAppraisal(selectedQuestionnaire.questionnaire_id)} onSecondaryClick={() => fetchAppraisalResult(selectedQuestionnaire.questionnaire_id)} primaryDisabled={!canGenerateAppraisal} secondaryDisabled={!canViewAppraisal} primaryLoading={generatingAppraisal} secondaryLoading={fetchingAppraisal} />
+              </div>
 
-                    <div className="mt-4 space-y-2 text-sm text-[#111827]">
-                      <p>
-                        Ready For Release:{" "}
-                        <span className="font-semibold">
-                          {analyticsReleaseData.is_ready ? "Yes" : "No"}
-                        </span>
-                      </p>
-                      <p>
-                        Released At:{" "}
-                        <span className="font-semibold">
-                          {analyticsReleaseData.released_at
-                            ? new Date(analyticsReleaseData.released_at).toLocaleString()
-                            : "—"}
-                        </span>
-                      </p>
-                      <p>
-                        Released By:{" "}
-                        <span className="font-semibold">
-                          {analyticsReleaseData.released_by || "—"}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Missing Requirements
-                    </p>
-
-                    {analyticsReleaseData.missing_requirements?.length > 0 ? (
-                      <ul className="mt-3 space-y-2 text-sm text-[#111827]">
-                        {analyticsReleaseData.missing_requirements.map((item, index) => (
-                          <li key={index}>• {item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-3 text-sm text-[#111827]">
-                        All required analytics components are available.
-                      </p>
-                    )}
-
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateAnalyticsRelease(selectedQuestionnaire.questionnaire_id, true)
-                        }
-                        disabled={updatingAnalyticsRelease || !analyticsReleaseData.is_ready}
-                        className="rounded-xl bg-[#111827] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {updatingAnalyticsRelease ? "Updating..." : "Release Analytics Data to Employee"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateAnalyticsRelease(selectedQuestionnaire.questionnaire_id, false)
-                        }
-                        disabled={updatingAnalyticsRelease}
-                        className="rounded-xl bg-gray-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {updatingAnalyticsRelease ? "Updating..." : "Unrelease Analytics Data"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {!hasPotentialAssessment && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">Potential admin controls need <span className="font-semibold">assessment_id</span> from the backend admin questionnaire list. Once that field is included in the response, these buttons will work.</div>}
             </div>
           )}
+        </div>
+      </div>
 
-        {showScoreCard && scoreData && (
-          <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">
-              HR Controls
-            </h2>
-
+      {selectedQuestionnaire && (
+        <div className={cardClass}>
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">Analytics Release Controls</h2>
+          {!analyticsReleaseData ? <p className="text-sm text-gray-600">{fetchingAnalyticsRelease ? "Loading analytics release status..." : "Analytics release status not loaded."}</p> : (
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                  Override Score
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={overrideScore}
-                  onChange={(e) => setOverrideScore(e.target.value)}
-                  placeholder="Enter override score"
-                  className="mb-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8"
-                />
-
-                <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                  Override Reason
-                </label>
-                <textarea
-                  value={overrideReason}
-                  onChange={(e) => setOverrideReason(e.target.value)}
-                  placeholder="Enter override reason"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8"
-                />
-
-                <button
-                  type="button"
-                  onClick={applyOverride}
-                  disabled={overriding}
-                  className="mt-4 rounded-xl bg-[#F6490D] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {overriding ? "Applying..." : "Apply Override"}
-                </button>
+              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Current Status</p>
+                <p className="mt-2 text-lg font-semibold text-[#111827]">{analyticsReleaseData.is_released_to_employee ? "Released" : "Not Released"}</p>
+                <div className="mt-4 space-y-2 text-sm text-[#111827]">
+                  <p>Ready For Release: <span className="font-semibold">{analyticsReleaseData.is_ready ? "Yes" : "No"}</span></p>
+                  <p>Released At: <span className="font-semibold">{analyticsReleaseData.released_at ? new Date(analyticsReleaseData.released_at).toLocaleString() : "—"}</span></p>
+                  <p>Released By: <span className="font-semibold">{analyticsReleaseData.released_by || "—"}</span></p>
+                </div>
               </div>
+              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Missing Requirements</p>
+                {analyticsReleaseData.missing_requirements?.length > 0 ? (
+                  <ul className="mt-3 space-y-2 text-sm text-[#111827]">{analyticsReleaseData.missing_requirements.map((item, index) => <li key={index}>• {item}</li>)}</ul>
+                ) : <p className="mt-3 text-sm text-[#111827]">All required analytics components are available.</p>}
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button type="button" onClick={() => updateAnalyticsRelease(selectedQuestionnaire.questionnaire_id, true)} disabled={updatingAnalyticsRelease || !analyticsReleaseData.is_ready} className="rounded-xl bg-[#111827] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{updatingAnalyticsRelease ? "Updating..." : "Release Analytics Data to Employee"}</button>
+                  <button type="button" onClick={() => updateAnalyticsRelease(selectedQuestionnaire.questionnaire_id, false)} disabled={updatingAnalyticsRelease} className="rounded-xl bg-gray-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{updatingAnalyticsRelease ? "Updating..." : "Unrelease Analytics Data"}</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4" hidden>
-                <p className="text-sm font-semibold text-[#111827]">
-                  Release Controls
-                </p>
-                <p className="mt-2 text-sm text-gray-600">
-                  Current Release Status:{" "}
-                  <span className="font-semibold text-[#111827]">
-                    {scoreData.is_released_to_employee ? "Released" : "Not Released"}
-                  </span>
-                </p>
+      {showScoreCard && scoreData && (
+        <div className={cardClass}>
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">HR Controls</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className={panelClass}>
+              <label className="mb-2 block text-sm font-semibold text-[#111827]">Override Score</label>
+              <input type="number" step="0.01" value={overrideScore} onChange={e => setOverrideScore(e.target.value)} placeholder="Enter override score" className={`mb-3 ${inputClass}`} />
+              <label className="mb-2 block text-sm font-semibold text-[#111827]">Override Reason</label>
+              <textarea value={overrideReason} onChange={e => setOverrideReason(e.target.value)} placeholder="Enter override reason" className={inputClass} />
+              <button type="button" onClick={applyOverride} disabled={overriding} className="mt-4 rounded-xl bg-[#F6490D] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{overriding ? "Applying..." : "Apply Override"}</button>
+            </div>
+            <div className={panelClass} hidden>
+              <p className="text-sm font-semibold text-[#111827]">Release Controls</p>
+              <p className="mt-2 text-sm text-gray-600">Current Release Status: <span className="font-semibold text-[#111827]">{scoreData.is_released_to_employee ? "Released" : "Not Released"}</span></p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" onClick={() => updateReleaseStatus(true)} disabled={releasing} className="rounded-xl bg-[#111827] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{releasing ? "Updating..." : "Release To Employee"}</button>
+                <button type="button" onClick={() => updateReleaseStatus(false)} disabled={releasing} className="rounded-xl bg-gray-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{releasing ? "Updating..." : "Unrelease Score"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => updateReleaseStatus(true)}
-                    disabled={releasing}
-                    className="rounded-xl bg-[#111827] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {releasing ? "Updating..." : "Release To Employee"}
-                  </button>
+      {showScoreCard && <ScoreBreakdownCard scoreData={scoreData} />}
 
-                  <button
-                    type="button"
-                    onClick={() => updateReleaseStatus(false)}
-                    disabled={releasing}
-                    className="rounded-xl bg-gray-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {releasing ? "Updating..." : "Unrelease Score"}
-                  </button>
+      {showPpiCard && ppiData && (
+        <div className={cardClass}>
+          <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">Past Performance Index (PPI)</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[["Current Cycle Score", "current_cycle_score"], ["Previous Cycle Score", "previous_cycle_score_1"], ["Older Cycle Score", "previous_cycle_score_2"], ["Final PPI Score", "ppi_score"]].map(([label, key]) => (
+              <div key={key} className={key === "ppi_score" ? "rounded-2xl border border-gray-200 bg-[#FFF7F4] p-4" : panelClass}>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+                <p className={`mt-2 font-semibold ${key === "ppi_score" ? "text-2xl font-bold" : "text-lg"}`}>{ppiData[key] ?? "—"}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showPotentialCard && potentialData && (
+        <div className={cardClass}>
+          <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">Potential Score</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className={panelClass}><p className="text-xs font-medium uppercase tracking-wide text-gray-500">RM Potential Score</p><p className="mt-2 text-lg font-semibold">{potentialData.rm_score ?? "—"}</p></div>
+            <div className={panelClass}><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Skip Potential Score</p><p className="mt-2 text-lg font-semibold">{potentialData.skip_score ?? "—"}</p></div>
+            <div className="rounded-2xl border border-gray-200 bg-[#FFF7F4] p-4 md:col-span-2"><p className="text-xs font-medium uppercase tracking-wide text-gray-500">Final Potential Score</p><p className="mt-2 text-2xl font-bold text-[#111827]">{potentialData.final_potential_score ?? "—"}</p></div>
+          </div>
+        </div>
+      )}
+
+      {showNineBoxCard && <NineBoxMatrixCard data={nineBoxData} />}
+
+      {showAppraisalCard && appraisalData && (
+        <>
+          <div className={cardClass}>
+            <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">Appraisal Override Controls</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className={panelClass}>
+                <label className="mb-2 block text-sm font-semibold text-[#111827]">Appraisal Override Percent</label>
+                <input type="number" step="0.01" value={appraisalOverridePercent} onChange={e => setAppraisalOverridePercent(e.target.value)} placeholder="Enter override appraisal percent" className={`mb-3 ${inputClass}`} />
+                <label className="mb-2 block text-sm font-semibold text-[#111827]">Override Reason</label>
+                <textarea value={appraisalOverrideReason} onChange={e => setAppraisalOverrideReason(e.target.value)} placeholder="Enter override reason" className={inputClass} />
+                <button type="button" onClick={applyAppraisalOverride} disabled={overridingAppraisal} className="mt-4 rounded-xl bg-[#F6490D] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60">{overridingAppraisal ? "Applying..." : "Apply Appraisal Override"}</button>
+              </div>
+              <div className="rounded-2xl border border-[#F6490D]/15 bg-[#FFF7F4] p-4">
+                <p className="text-sm font-semibold text-[#111827]">Recommendation Summary</p>
+                <div className="mt-3 space-y-2 text-sm text-[#111827]">
+                  <p>Box Label: <span className="font-semibold">{appraisalData.box_label ?? "—"}</span></p>
+                  <p>Suggested Appraisal: <span className="font-semibold">{appraisalData.suggested_appraisal_percent ?? "—"}%</span></p>
+                  <p>Final Effective Appraisal: <span className="font-semibold">{appraisalData.final_effective_appraisal_percent ?? "—"}%</span></p>
                 </div>
               </div>
             </div>
           </div>
-        )}
-
-        {showScoreCard && <ScoreBreakdownCard scoreData={scoreData} />}
-
-        {showPpiCard && ppiData && (
-          <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">
-              Past Performance Index (PPI)
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Current Cycle Score
-                </p>
-                <p className="mt-2 text-lg font-semibold">
-                  {ppiData.current_cycle_score ?? "—"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Previous Cycle Score
-                </p>
-                <p className="mt-2 text-lg font-semibold">
-                  {ppiData.previous_cycle_score_1 ?? "—"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Older Cycle Score
-                </p>
-                <p className="mt-2 text-lg font-semibold">
-                  {ppiData.previous_cycle_score_2 ?? "—"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-[#FFF7F4] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Final PPI Score
-                </p>
-                <p className="mt-2 text-2xl font-bold text-[#111827]">
-                  {ppiData.ppi_score ?? "—"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showPotentialCard && potentialData && (
-          <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-            <h2 className="mb-6 text-2xl font-semibold tracking-tight text-[#111827]">
-              Potential Score
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  RM Potential Score
-                </p>
-                <p className="mt-2 text-lg font-semibold">
-                  {potentialData.rm_score ?? "—"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Skip Potential Score
-                </p>
-                <p className="mt-2 text-lg font-semibold">
-                  {potentialData.skip_score ?? "—"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-[#FFF7F4] p-4 md:col-span-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Final Potential Score
-                </p>
-                <p className="mt-2 text-2xl font-bold text-[#111827]">
-                  {potentialData.final_potential_score ?? "—"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showNineBoxCard && <NineBoxMatrixCard data={nineBoxData} />}
-
-        {showAppraisalCard && appraisalData && (
-          <>
-            <div className="rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-              <h2 className="mb-4 text-xl font-semibold tracking-tight text-[#111827]">
-                Appraisal Override Controls
-              </h2>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-gray-200 bg-[#FCFCFD] p-4">
-                  <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                    Appraisal Override Percent
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={appraisalOverridePercent}
-                    onChange={(e) => setAppraisalOverridePercent(e.target.value)}
-                    placeholder="Enter override appraisal percent"
-                    className="mb-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8"
-                  />
-
-                  <label className="mb-2 block text-sm font-semibold text-[#111827]">
-                    Override Reason
-                  </label>
-                  <textarea
-                    value={appraisalOverrideReason}
-                    onChange={(e) => setAppraisalOverrideReason(e.target.value)}
-                    placeholder="Enter override reason"
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#F6490D]/25 focus:ring-4 focus:ring-[#F6490D]/8"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={applyAppraisalOverride}
-                    disabled={overridingAppraisal}
-                    className="mt-4 rounded-xl bg-[#F6490D] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {overridingAppraisal ? "Applying..." : "Apply Appraisal Override"}
-                  </button>
-                </div>
-
-                <div className="rounded-2xl border border-[#F6490D]/15 bg-[#FFF7F4] p-4">
-                  <p className="text-sm font-semibold text-[#111827]">
-                    Recommendation Summary
-                  </p>
-                  <div className="mt-3 space-y-2 text-sm text-[#111827]">
-                    <p>
-                      Box Label:{" "}
-                      <span className="font-semibold">{appraisalData.box_label ?? "—"}</span>
-                    </p>
-                    <p>
-                      Suggested Appraisal:{" "}
-                      <span className="font-semibold">
-                        {appraisalData.suggested_appraisal_percent ?? "—"}%
-                      </span>
-                    </p>
-                    <p>
-                      Final Effective Appraisal:{" "}
-                      <span className="font-semibold">
-                        {appraisalData.final_effective_appraisal_percent ?? "—"}%
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <AppraisalRecommendationCard appraisalData={appraisalData} />
-          </>
-        )}
-      </section>
+          <AppraisalRecommendationCard appraisalData={appraisalData} />
+        </>
+      )}
+    </section>
   );
 }

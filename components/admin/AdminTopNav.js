@@ -17,6 +17,14 @@ const navItems = [
     href: "/admin-console/questions",
   },
   {
+    label: "Questionnaire Builder",
+    href: "/admin-console/questionnaires",
+  },
+  {
+    label: "Descriptive Scoring",
+    href: "/admin-console/descriptive-scoring",
+  },
+  {
     label: "Potential Questions",
     href: "/admin-console/questions/potential",
   },
@@ -49,7 +57,7 @@ export default function AdminTopNav() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        {navItems.map((item) => {
+        {navItems.map(item => {
           const isActive = pathname === item.href;
 
           return (

@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "@/app/context/AuthContext";
 import AuthGuard from "@/components/auth/AuthGuard";
+import QueryProvider from "@/app/providers/QueryProvider";
 import { Toaster } from "sonner";
 
 export const metadata = {
@@ -12,9 +13,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <AuthGuard>{children}</AuthGuard>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AuthGuard>{children}</AuthGuard>
+          </AuthProvider>
+        </QueryProvider>
         <Toaster position="top-right" richColors />
       </body>
     </html>
