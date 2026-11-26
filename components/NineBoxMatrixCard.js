@@ -66,7 +66,7 @@ export default function NineBoxMatrixCard({ data }) {
 
   const meta = BOX_META[data.box_label] || {
     title: data.box_label || "9-Box Placement",
-    description: data.box_description || "Placement description not available.",
+    description: data.box_description || "Placement description is not available.",
   };
 
   return (
