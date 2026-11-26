@@ -5,14 +5,12 @@ import { useRouter } from "next/navigation";
 import { fetchMe, loginEmployee } from "@/lib/api";
 
 const AuthContext = createContext(null);
-
 const USER_KEY = "tor_ai_user";
 const ACCESS_KEY = "tor_ai_access_token";
 const REFRESH_KEY = "tor_ai_refresh_token";
 
 export function AuthProvider({ children }) {
   const router = useRouter();
-
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
@@ -34,7 +32,6 @@ export function AuthProvider({ children }) {
     setUser(employee);
     setAccessToken(access);
     setRefreshToken(refresh);
-
     localStorage.setItem(USER_KEY, JSON.stringify(employee));
     localStorage.setItem(ACCESS_KEY, access);
     localStorage.setItem(REFRESH_KEY, refresh);
@@ -46,15 +43,12 @@ export function AuthProvider({ children }) {
         const storedUser = localStorage.getItem(USER_KEY);
         const storedAccess = localStorage.getItem(ACCESS_KEY);
         const storedRefresh = localStorage.getItem(REFRESH_KEY);
-
         if (!storedUser || !storedAccess || !storedRefresh) {
           clearAuthState();
           return;
         }
-
         try {
           const me = await fetchMe(storedAccess);
-
           setUser(me);
           setAccessToken(storedAccess);
           setRefreshToken(storedRefresh);
@@ -72,21 +66,17 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     }
-
     restoreSession();
   }, []);
 
   const login = async ({ employee_number, password }) => {
     const data = await loginEmployee({ employee_number, password });
-
     const employee = data?.employee;
     const access = data?.access;
     const refresh = data?.refresh;
-
     if (!employee || !access || !refresh) {
       throw new Error("Invalid login response from server.");
     }
-
     persistAuthState({ employee, access, refresh });
     router.push("/dashboard");
   };
@@ -97,29 +87,24 @@ export function AuthProvider({ children }) {
     router.push("/login");
   };
 
-  const value = useMemo(
-    () => ({
-      user,
-      accessToken,
-      refreshToken,
-      loading,
-      isAuthenticated: !!user && !!accessToken,
-      login,
-      logout,
-      setUser,
-    }),
-    [user, accessToken, refreshToken, loading]
-  );
+  const value = useMemo(() => ({
+    user,
+    accessToken,
+    refreshToken,
+    loading,
+    isAuthenticated: !!user && !!accessToken,
+    login,
+    logout,
+    setUser
+  }), [user, accessToken, refreshToken, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider.");
   }
-
   return context;
 }

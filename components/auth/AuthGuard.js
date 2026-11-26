@@ -8,18 +8,14 @@ export default function AuthGuard({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, loading } = useAuth();
-
   const publicRoutes = ["/login"];
 
   useEffect(() => {
     if (loading) return;
-
     const isPublicRoute = publicRoutes.includes(pathname);
-
     if (!isAuthenticated && !isPublicRoute) {
       router.push("/login");
     }
-
     if (isAuthenticated && pathname === "/login") {
       router.push("/dashboard");
     }
@@ -34,14 +30,7 @@ export default function AuthGuard({ children }) {
   }
 
   const isPublicRoute = publicRoutes.includes(pathname);
-
-  if (!isAuthenticated && !isPublicRoute) {
-    return null;
-  }
-
-  if (isAuthenticated && pathname === "/login") {
-    return null;
-  }
-
+  if (!isAuthenticated && !isPublicRoute) return null;
+  if (isAuthenticated && pathname === "/login") return null;
   return children;
 }
