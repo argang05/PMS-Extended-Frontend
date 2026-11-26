@@ -64,6 +64,12 @@ function StatCard({ label, value, color = "text-[#111827]" }) {
   );
 }
 
+function getScoringQuestionnaireId(c) {
+  const id = c.mode === "performance" ? c.selectedId : c.workspace?.questionnaire_id || c.selectedRecord?.questionnaire_id;
+  const value = String(id ?? "");
+  return /^\d+$/.test(value) && Number(value) > 0 ? value : "";
+}
+
 function ModeTabs({ mode, onChange, disabled }) {
   return (
     <div role="tablist" aria-label="Descriptive scoring mode" className="relative grid max-w-xl grid-cols-2 rounded-2xl bg-gray-100 p-1.5">
@@ -203,7 +209,52 @@ function ReadinessStatus({ controller: c }) {
   );
 }
 
-function WorkspaceOverview({ controller: c }) {
+function ScoringCompletion({ controller: c, onOpenScoring }) {
+  const { progress, workspace, selectedRecord } = c;
+  const modeLabel = DESCRIPTIVE_MODES[c.mode];
+  const questionnaireId = getScoringQuestionnaireId(c);
+  const complete = Boolean(
+    c.selectedId && workspace && c.scoringEnabled &&
+    !c.loadingWorkspace && !c.workspaceError && !c.preferenceError &&
+    !c.conflict && !c.requiresReload && !c.dirty && !c.busy &&
+    progress.total > 0 && progress.scored === progress.total &&
+    progress.pending === 0 &&
+    c.questions.every(question => question.is_scored && !question.has_conflict && question.responses_complete !== false) &&
+    (c.mode !== "potential" || workspace.readiness?.ready_for_calculation === true)
+  );
+  if (!complete) return null;
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm transition-all duration-300">
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <div className="shrink-0 rounded-2xl bg-emerald-100 p-3 text-emerald-600">
+            <CheckCircle2 size={28} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-emerald-900">{modeLabel} Descriptive Scoring Completed</h3>
+              <StatusBadge color="green">100% Completed</StatusBadge>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-emerald-800">
+              All {progress.total} descriptive questions for <span className="font-semibold">{selectedRecord?.employee_name || workspace?.employee_name || "the selected employee"}</span> have received their consolidated scores successfully.
+            </p>
+            <p className="mt-2 text-xs leading-6 text-emerald-700">
+              Continue to the Scoring Console to review calculation readiness and calculate or recalculate the applicable {modeLabel} score.
+            </p>
+            {!questionnaireId && (
+              <p className="mt-2 text-xs font-medium text-amber-700">The linked Performance questionnaire ID is unavailable. Refresh the workspace before continuing.</p>
+            )}
+          </div>
+        </div>
+        <button type="button" onClick={onOpenScoring} disabled={c.operationLocked || !questionnaireId} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
+          <ChartNoAxesCombined size={18} /> Go to Scoring Console <ArrowUpRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceOverview({ controller: c, onOpenScoring }) {
   const { progress, workspace, selectedRecord } = c;
   return (
     <section className={cardClass}>
@@ -241,7 +292,7 @@ function WorkspaceOverview({ controller: c }) {
           </div>
           <div className="mt-5 space-y-3">
             <ReadinessStatus controller={c} />
-            {c.mode === "performance" && progress.total > 0 && progress.pending === 0 && <Notice title="All submitted descriptive questions have received consolidated scores." variant="success" />}
+            <ScoringCompletion controller={c} onOpenScoring={onOpenScoring} />
             {progress.total === 0 && <Notice title="No descriptive questions available" description="No descriptive questions or submitted descriptive responses are available for this questionnaire." />}
           </div>
         </>
@@ -394,10 +445,11 @@ export default function DescriptiveWorkspace({ controller: c }) {
   const filteredQuestions = useMemo(() => filterDescriptiveQuestions(c.questions, c.questionFilters), [c.questions, c.questionFilters]);
   const updateQuestionFilter = (key, value) => c.setQuestionFilters(previous => ({ ...previous, [key]: value }));
   const openScoring = () => {
-    const questionnaireId = c.mode === "performance" ? c.selectedId : c.workspace?.questionnaire_id || c.selectedRecord?.questionnaire_id;
+    if (c.operationLocked) return;
+    const questionnaireId = getScoringQuestionnaireId(c);
     const params = new URLSearchParams();
     if (questionnaireId) params.set("questionnaire_id", questionnaireId);
-    c.guardUnsaved(() => router.push(`/admin-console/score-analytics${params.size ? `?${params}` : ""}`));
+    c.guardUnsaved(() => router.push(`/admin-console/score-analytics${params.size ? `?${params}` : ""}`), "Leave Descriptive Scoring?");
   };
 
   useEffect(() => {
@@ -447,7 +499,7 @@ export default function DescriptiveWorkspace({ controller: c }) {
       )}
       {c.selectedId && c.scoringEnabled && (
         <>
-          <WorkspaceOverview controller={c} />
+          <WorkspaceOverview controller={c} onOpenScoring={openScoring} />
           <ScoringHistory controller={c} />
           {c.workspace && c.questions.length > 0 && !c.workspaceError && (
             <section className={cardClass}>
