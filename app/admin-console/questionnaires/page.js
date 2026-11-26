@@ -9,7 +9,7 @@ import { Plus, RefreshCw, Copy, Trash2, ArrowUp, ArrowDown, Save, Search, Rotate
 const inputClass = "w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#F6490D]";
 const primaryClass = "inline-flex items-center justify-center gap-2 rounded-xl bg-[#F6490D] px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50";
 const secondaryClass = "inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-[#111827] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
-const dangerClass = "inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50";
+const dangerClass = "inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
 const cardClass = "rounded-[28px] bg-white p-6 shadow-[0_12px_30px_rgba(0,0,0,0.08)]";
 const initialQuestion = { question_text: "", category_id: "", question_type: "objective", max_marks: "10", default_weightage: "1", target_mode: "manual", department: "", departments: [], employee_ids: [], excluded_employee_ids: [], is_active: true };
 const emptyFilters = { cycle: "", employee: "", status: "" };
@@ -118,7 +118,6 @@ export default function AdminQuestionnairesPage() {
 
   const dragRef = useRef(null);
   const busyRef = useRef(false);
-  const orderDirtyRef = useRef(false);
   const selectedIdRef = useRef("");
   const draftWeightagesRef = useRef({});
   const syncedIdRef = useRef("");
@@ -127,7 +126,6 @@ export default function AdminQuestionnairesPage() {
 
   const api = useCallback((path, method = "GET", payload, signal) => request(path, accessToken, method, payload, signal), [accessToken]);
   selectedIdRef.current = selectedId;
-  orderDirtyRef.current = orderDirty;
 
   const questionQuery = useQuery({
     queryKey: questionKey,
@@ -151,7 +149,12 @@ export default function AdminQuestionnairesPage() {
   });
   const detailsQuery = useQuery({
     queryKey: detailKey(selectedId),
-    queryFn: async ({ signal }) => { const data = await api(`/api/admin/questionnaires/${selectedId}`, "GET", undefined, signal); if (!validDetails(data)) throw new Error("Invalid questionnaire details response."); return data; },
+    queryFn: async ({ signal }) => {
+      const data = await api(`/api/admin/questionnaires/${selectedId}`, "GET", undefined, signal);
+      if (!validDetails(data)) throw new Error("Invalid questionnaire details response.");
+      if (data.questionnaire_id != null && !same(data.questionnaire_id, selectedId)) throw new Error("Server returned details for a different questionnaire.");
+      return data;
+    },
     enabled: !!accessToken && !!selectedId, staleTime: 60000
   });
 
@@ -177,9 +180,14 @@ export default function AdminQuestionnairesPage() {
   const excludedIds = useMemo(() => new Set((details?.excluded_question_ids || []).map(String)), [details]);
 
   const allSortedQuestions = useMemo(() => {
-    const lookup = new Map((details?.questions || []).map(q => [String(q.item_id), q]));
-    return orderedItems.map(id => lookup.get(String(id))).filter(Boolean);
-  }, [details, orderedItems]);
+    const items = [...(details?.questions || [])].sort((a, b) => Number(a.order) - Number(b.order));
+    if (!items.length) return [];
+    if (!orderDirty) return items;
+    const lookup = new Map(items.map(item => [String(item.item_id), item]));
+    const ordered = orderedItems.map(id => lookup.get(String(id))).filter(Boolean);
+    const existingIds = new Set(ordered.map(item => String(item.item_id)));
+    return [...ordered, ...items.filter(item => !existingIds.has(String(item.item_id)))];
+  }, [details, orderedItems, orderDirty]);
 
   const sortedQuestions = useMemo(() => activeTab === "all" ? allSortedQuestions : allSortedQuestions.filter(q => getCategoryTab(q.category, q.category_type) === activeTab), [allSortedQuestions, activeTab]);
 
@@ -220,26 +228,29 @@ export default function AdminQuestionnairesPage() {
   }, [questionSearch, typeFilter, assignmentFilter, targetFilter, activeTab, selectedId]);
 
   useEffect(() => {
-    if (!selectedId) {
-      syncedIdRef.current = "";
+    const id = String(selectedId || "");
+    const selectionChanged = syncedIdRef.current !== id;
+    if (selectionChanged) {
+      syncedIdRef.current = id;
       draftWeightagesRef.current = {};
-      setOrderedItems([]); setWeightages({}); setOrderDirty(false); setDragOver(null);
+      setOrderDirty(false);
+      setDragOver(null);
+      setCopySourceId("");
+    }
+    if (!id || !details) {
+      if (selectionChanged || !id) {
+        setOrderedItems([]);
+        setWeightages({});
+      }
       return;
     }
-    if (syncedIdRef.current !== String(selectedId)) {
-      syncedIdRef.current = String(selectedId);
-      draftWeightagesRef.current = {};
-      setOrderedItems([]); setWeightages({}); setOrderDirty(false); setDragOver(null);
-    }
-  }, [selectedId]);
-
-  useEffect(() => {
-    if (!details || busyRef.current || orderDirtyRef.current) return;
-    setOrderedItems(orderedQuestionIds(details));
+    if (!selectionChanged && (busy || orderDirty)) return;
     const persisted = weightageMap(details);
-    const drafts = draftWeightagesRef.current;
-    setWeightages({ ...persisted, ...Object.fromEntries(Object.entries(drafts).filter(([id]) => id in persisted)) });
-  }, [details, selectedId]);
+    const drafts = Object.fromEntries(Object.entries(draftWeightagesRef.current).filter(([itemId]) => itemId in persisted));
+    draftWeightagesRef.current = drafts;
+    setOrderedItems(orderedQuestionIds(details));
+    setWeightages({ ...persisted, ...drafts });
+  }, [details, selectedId, busy, orderDirty]);
 
   useEffect(() => {
     const errors = [questionQuery.error, categoryQuery.error, cycleQuery.error, listQuery.error, detailsQuery.error].filter(Boolean);
@@ -256,18 +267,21 @@ export default function AdminQuestionnairesPage() {
   }, [accessToken, queryClient]);
 
   const invalidate = useCallback((key, active = false) => queryClient.invalidateQueries({ queryKey: key, refetchType: active ? "active" : "none" }), [queryClient]);
-  const loadQuestionnaires = useCallback(() => queryClient.refetchQueries({ queryKey: listKey, type: "active", throwOnError: true }), [queryClient, listKey]);
+  const loadQuestionnaires = useCallback(() => queryClient.refetchQueries({ queryKey: listKey, type: "active" }, { throwOnError: true }), [queryClient, listKey]);
   const refreshReferenceData = useCallback(() => Promise.all([
-    queryClient.refetchQueries({ queryKey: questionKey, type: "active", throwOnError: true }),
-    queryClient.refetchQueries({ queryKey: categoryKey, type: "active", throwOnError: true }),
-    queryClient.refetchQueries({ queryKey: cycleKey, type: "active", throwOnError: true })
+    queryClient.refetchQueries({ queryKey: questionKey, type: "active" }, { throwOnError: true }),
+    queryClient.refetchQueries({ queryKey: categoryKey, type: "active" }, { throwOnError: true }),
+    queryClient.refetchQueries({ queryKey: cycleKey, type: "active" }, { throwOnError: true })
   ]), [queryClient, questionKey, categoryKey, cycleKey]);
 
   const fetchAuthoritativeDetails = useCallback(async id => {
+    const key = detailKey(id);
+    await queryClient.cancelQueries({ queryKey: key, exact: true });
     const data = await api(`/api/admin/questionnaires/${id}`);
     if (!validDetails(data)) throw new Error("Server returned incomplete questionnaire details.");
-    queryClient.setQueryData(detailKey(id), data);
-    queryClient.setQueryData(listKey, rows => statusUpdate(rows, id, data));
+    if (data.questionnaire_id != null && !same(data.questionnaire_id, id)) throw new Error("Server returned details for a different questionnaire.");
+    queryClient.setQueryData(key, data);
+    queryClient.setQueryData(listKey, rows => Array.isArray(rows) ? statusUpdate(rows, id, data) : rows);
     return data;
   }, [api, queryClient, detailKey, listKey]);
 
@@ -288,7 +302,7 @@ export default function AdminQuestionnairesPage() {
   async function beginWrite(id, optimistic) {
     busyRef.current = true; setBusy(true);
     const key = detailKey(id);
-    await Promise.all([queryClient.cancelQueries({ queryKey: key }), queryClient.cancelQueries({ queryKey: listKey })]);
+    await Promise.all([queryClient.cancelQueries({ queryKey: key, exact: true }), queryClient.cancelQueries({ queryKey: listKey, exact: true })]);
     const snapshot = queryClient.getQueryData(key);
     const listSnapshot = queryClient.getQueryData(listKey);
     if (optimistic && snapshot) {
@@ -316,10 +330,11 @@ export default function AdminQuestionnairesPage() {
     busyRef.current = true; setBusy(true);
     let committed = false;
     try {
+      await Promise.all([queryClient.cancelQueries({ queryKey: detailKey(id), exact: true }), queryClient.cancelQueries({ queryKey: listKey, exact: true })]);
       const result = await api(path, method, payload);
       committed = true;
       toast.success(result.message || message || "Operation completed.");
-      if (validDetails(result.questionnaire)) {
+      if (validDetails(result.questionnaire) && (result.questionnaire.questionnaire_id == null || same(result.questionnaire.questionnaire_id, id))) {
         queryClient.setQueryData(detailKey(id), result.questionnaire);
         queryClient.setQueryData(listKey, rows => statusUpdate(rows, id, result.questionnaire));
       } else if (id) await reconcileDetails(id);
@@ -327,6 +342,7 @@ export default function AdminQuestionnairesPage() {
       return result;
     } catch (error) {
       if (!committed) { toast.error(error.message); if (id) await reconcileDetails(id); }
+      else toast.warning("Change saved, but synchronization is incomplete. Use Refresh to reload.");
       return null;
     } finally { finishWrite(); }
   }
@@ -338,19 +354,45 @@ export default function AdminQuestionnairesPage() {
     const employeeNumber = createEmployeeId.trim(), cycleId = Number(createCycleId);
     if (!employeeNumber || !Number.isInteger(cycleId) || cycleId <= 0) return toast.error("Enter a valid employee number and select a review cycle.");
     busyRef.current = true; setBusy(true);
+    let committed = false;
     try {
       const result = await api("/api/admin/questionnaires", "POST", { employee_number: employeeNumber, cycle_id: cycleId });
-      toast.success(result.message || "Questionnaire created.");
+      committed = true;
       const q = result.questionnaire;
-      if (q?.questionnaire_id) {
-        const id = String(q.questionnaire_id);
-        if (validDetails(q)) queryClient.setQueryData(detailKey(id), q);
-        setSelectedId(id);
-        if (!validDetails(q)) await reconcileDetails(id);
+      if (!q?.questionnaire_id) {
+        await reconcileList();
+        toast.warning("Questionnaire saved, but its identifier was not returned. Select it from the questionnaire list.");
+        return;
       }
-      await reconcileList();
-    } catch (error) { toast.error(error.message); }
-    finally { finishWrite(); }
+      const id = String(q.questionnaire_id), key = detailKey(id);
+      await queryClient.cancelQueries({ queryKey: key, exact: true });
+      let nextDetails = null;
+      if (validDetails(q) && q.questions.length > 0) {
+        nextDetails = q;
+        queryClient.setQueryData(key, q);
+        queryClient.setQueryData(listKey, rows => Array.isArray(rows) ? statusUpdate(rows, id, q) : rows);
+        await reconcileList();
+      } else {
+        const results = await Promise.all([reconcileDetails(id), reconcileList()]);
+        nextDetails = results[0];
+      }
+      if (!nextDetails) {
+        queryClient.removeQueries({ queryKey: key, exact: true });
+      }
+      draftWeightagesRef.current = {};
+      syncedIdRef.current = id;
+      setOrderedItems(orderedQuestionIds(nextDetails));
+      setWeightages(weightageMap(nextDetails));
+      setOrderDirty(false);
+      setDragOver(null);
+      setCopySourceId("");
+      setActiveTab("all");
+      setSelectedId(id);
+      toast.success(result.message || "Questionnaire created.");
+    } catch (error) {
+      if (committed) toast.warning("Questionnaire saved, but synchronization is incomplete. Use Refresh to reload.");
+      else toast.error(error.message);
+    } finally { finishWrite(); }
   }
 
   async function includeQuestion(question) {
@@ -419,7 +461,8 @@ export default function AdminQuestionnairesPage() {
     if (!editable) return;
     if (orderDirty) return toast.warning("Save or discard your question order changes first.");
     if (busyRef.current) return;
-    const weightage = Number(weightages[itemId]);
+    const item = details?.questions?.find(q => same(q.item_id, itemId));
+    const weightage = Number(weightages[itemId] ?? item?.weightage);
     if (!Number.isFinite(weightage) || weightage <= 0) return toast.error("Weightage must be greater than zero.");
     if (String(itemId).startsWith("temporary-")) return toast.warning("Wait until the question has been saved.");
     const id = selectedId;
@@ -449,15 +492,14 @@ export default function AdminQuestionnairesPage() {
   function reorder(from, to) {
     if (!editable || busyRef.current || from === to || from < 0 || to < 0 || from >= sortedQuestions.length || to >= sortedQuestions.length) return;
     const sourceId = sortedQuestions[from].item_id, targetId = sortedQuestions[to].item_id;
-    setOrderedItems(previous => {
-      const next = [...previous], sourceIndex = next.findIndex(id => same(id, sourceId));
-      if (sourceIndex < 0) return previous;
-      const [moved] = next.splice(sourceIndex, 1);
-      const targetIndex = next.findIndex(id => same(id, targetId));
-      if (targetIndex < 0) return previous;
-      next.splice(from < to ? targetIndex + 1 : targetIndex, 0, moved);
-      return next;
-    });
+    const next = allSortedQuestions.map(q => q.item_id);
+    const sourceIndex = next.findIndex(id => same(id, sourceId));
+    if (sourceIndex < 0) return;
+    const [moved] = next.splice(sourceIndex, 1);
+    const targetIndex = next.findIndex(id => same(id, targetId));
+    if (targetIndex < 0) return;
+    next.splice(from < to ? targetIndex + 1 : targetIndex, 0, moved);
+    setOrderedItems(next);
     setOrderDirty(true);
   }
 
@@ -465,8 +507,9 @@ export default function AdminQuestionnairesPage() {
     if (!editable) return;
     if (!orderDirty) return toast.info("Question order has not changed.");
     if (busyRef.current) return;
-    if (orderedItems.some(id => String(id).startsWith("temporary-"))) return toast.warning("Wait for pending questions to finish saving.");
-    const id = selectedId, nextOrder = [...orderedItems];
+    const nextOrder = allSortedQuestions.map(q => q.item_id);
+    if (nextOrder.some(id => String(id).startsWith("temporary-"))) return toast.warning("Wait for pending questions to finish saving.");
+    const id = selectedId;
     let saved, committed = false;
     try {
       saved = await beginWrite(id, previous => ({
@@ -569,14 +612,17 @@ export default function AdminQuestionnairesPage() {
   async function refreshAll() {
     if (orderDirty) return toast.warning("Save or discard your question order changes first.");
     if (busyRef.current) return;
-    const tasks = [
-      queryClient.refetchQueries({ queryKey: listKey, type: "active", throwOnError: true }),
-      refreshReferenceData(),
-      selectedId ? fetchAuthoritativeDetails(selectedId) : Promise.resolve()
-    ];
-    const results = await Promise.allSettled(tasks);
-    if (results.some(r => r.status === "rejected")) toast.error("Some data could not be refreshed.");
-    else toast.success("Refresh completed.");
+    busyRef.current = true; setBusy(true);
+    try {
+      const id = selectedId;
+      const results = await Promise.allSettled([
+        loadQuestionnaires(),
+        refreshReferenceData(),
+        id ? fetchAuthoritativeDetails(id) : Promise.resolve()
+      ]);
+      if (results.some(result => result.status === "rejected")) toast.error("Some data could not be refreshed.");
+      else toast.success("Refresh completed.");
+    } finally { finishWrite(); }
   }
 
   async function openCreateQuestion() {
@@ -619,9 +665,11 @@ export default function AdminQuestionnairesPage() {
   function changeTargetMode(mode) {
     setNewQuestion(previous => ({ ...previous, target_mode: mode, department: "", departments: [], employee_ids: [], excluded_employee_ids: [] }));
   }
+
   function toggleDepartment(department) {
     setNewQuestion(previous => ({ ...previous, departments: previous.departments.includes(department) ? previous.departments.filter(v => v !== department) : [...previous.departments, department] }));
   }
+
   function toggleEmployee(employeeId) {
     setNewQuestion(previous => ({ ...previous, employee_ids: previous.employee_ids.includes(employeeId) ? previous.employee_ids.filter(v => v !== employeeId) : [...previous.employee_ids, employeeId] }));
   }
@@ -682,7 +730,7 @@ export default function AdminQuestionnairesPage() {
         <div><h1 className="text-3xl font-semibold tracking-tight text-[#111827]">Questionnaire Builder</h1>
           <p className="mt-2 text-sm text-gray-600">Create, customize and reorder employee-specific performance questionnaires until the employee submits their self-review.</p>
         </div>
-        <button type="button" onClick={refreshAll} disabled={busy || orderDirty} className={secondaryClass}><RefreshCw size={16} /> Refresh</button>
+        <button type="button" onClick={refreshAll} disabled={busy || orderDirty} className={secondaryClass}><RefreshCw size={16} className={busy ? "animate-spin" : ""} /> Refresh</button>
       </div>
     </section>
 
@@ -730,7 +778,17 @@ export default function AdminQuestionnairesPage() {
                 <button type="button" disabled={busy} onClick={() => {
                   if (orderDirty) return toast.warning("Save or discard your question order changes first.");
                   if (busyRef.current) return;
-                  setSelectedId(String(item.questionnaire_id));
+                  const id = String(item.questionnaire_id);
+                  if (same(id, selectedId)) return;
+                  const cached = queryClient.getQueryData(detailKey(id));
+                  draftWeightagesRef.current = {};
+                  syncedIdRef.current = id;
+                  setOrderedItems(orderedQuestionIds(cached));
+                  setWeightages(weightageMap(cached));
+                  setOrderDirty(false);
+                  setDragOver(null);
+                  setCopySourceId("");
+                  setSelectedId(id);
                 }} className={selected ? primaryClass : secondaryClass}><Eye size={16} /> {selected ? "Selected" : "Manage"}</button>
               </div>
             </div>;
@@ -741,7 +799,8 @@ export default function AdminQuestionnairesPage() {
     {selectedId && <>
       <Section title="Selected Questionnaire" description={`Questionnaire #${selectedId}`} actions={<StatusBadge status={details?.status} editable={details?.is_editable} />}>
         {detailsLoading || !details ? <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Loader2 size={17} className="animate-spin" /> {detailsQuery.isError ? "Failed to load questionnaire details." : "Loading questionnaire details..."}
+          {detailsQuery.isError ? <AlertCircle size={17} className="text-red-600" /> : <Loader2 size={17} className="animate-spin" />}
+          {detailsQuery.isError ? "Failed to load questionnaire details." : "Loading questionnaire details..."}
           {detailsQuery.isError && <button type="button" onClick={() => detailsQuery.refetch()} className="font-semibold text-[#F6490D] underline">Retry</button>}
         </div> : <div className="space-y-5">
           <div className="grid gap-4 rounded-2xl bg-gray-50 p-4 text-sm md:grid-cols-3">
@@ -806,7 +865,7 @@ export default function AdminQuestionnairesPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-200 pt-3">
                   <div className="w-24"><label className="mb-1 block text-xs text-gray-600">Weightage</label>
-                    <input type="number" min="0.01" step="any" disabled={!editable || busy || item.pending} value={weightages[item.item_id] ?? ""}
+                    <input type="number" min="0.01" step="any" disabled={!editable || busy || item.pending} value={weightages[item.item_id] ?? String(item.weightage ?? "")}
                       onChange={e => changeWeightage(item.item_id, e.target.value)} className={inputClass} />
                   </div>
                   <button type="button" disabled={!editable || busy || item.pending || orderDirty} onClick={() => updateWeightage(item.item_id)} className={secondaryClass} title="Save weightage"><Save size={15} /></button>
